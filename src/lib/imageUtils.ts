@@ -260,9 +260,51 @@ export const TEAM_DEFAULT_LOGOS: Record<string, string> = {
   <circle cx="106" cy="58" r="12" fill="#DC2626" stroke="#FFFFFF" stroke-width="2"/>
   <path d="M100 54 C104 56, 110 62, 112 66" stroke="#FFFFFF" stroke-width="1.5"/>
   <!-- Banner -->
-  <rect x="32" y="104" width="96" height="22" rx="4" fill="#0284C7" stroke="#BAE6FD" stroke-width="1.5"/>
-  <text x="80" y="119" font-family="'Arial Black', sans-serif" font-size="11" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-    TEAM 4
+  <rect x="24" y="104" width="112" height="22" rx="4" fill="#0284C7" stroke="#BAE6FD" stroke-width="1.5"/>
+  <text x="80" y="119" font-family="'Arial Black', sans-serif" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+    BROTHERS TITANS
+  </text>
+</svg>
+`)}`,
+
+  'team-strikers': `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="bsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626"/>
+      <stop offset="100%" stop-color="#7F1D1D"/>
+    </linearGradient>
+  </defs>
+  <!-- Flame Shield Frame -->
+  <path d="M80 16 L136 38 V92 C136 122 80 144 80 144 C80 144 24 122 24 92 V38 L80 16 Z" fill="#18181B" stroke="#DC2626" stroke-width="5"/>
+  <!-- Fire Lightning Strike -->
+  <path d="M86 36 L64 74 H86 L74 108 L104 68 H84 L96 36 Z" fill="#F59E0B" stroke="#DC2626" stroke-width="2"/>
+  <!-- Banner -->
+  <rect x="22" y="106" width="116" height="22" rx="4" fill="#DC2626" stroke="#FECACA" stroke-width="1.5"/>
+  <text x="80" y="121" font-family="'Arial Black', sans-serif" font-size="9" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
+    BROTHERS STRIKERS
+  </text>
+</svg>
+`)}`,
+
+  'team-challengers': `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="bcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#134E4A"/>
+    </linearGradient>
+  </defs>
+  <!-- Circle Crest -->
+  <circle cx="80" cy="80" r="70" fill="#042F2E" stroke="#14B8A6" stroke-width="6"/>
+  <!-- Crossed Bats & Eagle Wings -->
+  <path d="M42 42 L118 118" stroke="#14B8A6" stroke-width="6" stroke-linecap="round"/>
+  <path d="M118 42 L42 118" stroke="#14B8A6" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="80" cy="74" r="16" fill="#F59E0B" stroke="#FFFFFF" stroke-width="2"/>
+  <!-- Banner -->
+  <rect x="18" y="104" width="124" height="24" rx="4" fill="#0D9488" stroke="#99F6E4" stroke-width="1.5"/>
+  <text x="80" y="120" font-family="'Arial Black', sans-serif" font-size="8.5" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
+    BROTHERS CHALLENGERS
   </text>
 </svg>
 `)}`,

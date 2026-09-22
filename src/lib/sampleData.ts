@@ -83,18 +83,17 @@ export function createSampleDraftData(): {
     },
   ];
 
-  // 11 Players Quota per team by default for the 3 official teams (total 33 players drafted):
-  // 3 Top + 1 Middle + 4 Batting All + 1 Bowling All + 1 Bowler + 1 WK = 11 players per team!
-  const default11Quotas: Record<string, number> = {
-    'cat-top-order': 3,
+  // 6 Teams Quota per team by default for the 6 BPL franchise teams (total 42 slots for 41 players):
+  const default6Quotas: Record<string, number> = {
+    'cat-top-order': 2,
     'cat-middle-order': 1,
-    'cat-bat-all': 4,
+    'cat-bat-all': 3,
     'cat-bowl-all': 1,
     'cat-bowler': 1,
     'cat-wk-batter': 1,
   };
 
-  // The 3 Official Franchise Teams from BPL Season-2 Sheet
+  // The 6 Official Franchise Teams for BPL Season-2
   const teams: Team[] = [
     {
       id: 'team-warriors',
@@ -104,8 +103,10 @@ export function createSampleDraftData(): {
       logoUrl: TEAM_DEFAULT_LOGOS['team-warriors'],
       primaryColor: '#16A34A',
       secondaryColor: '#DCFCE7',
-      maxPlayers: 11,
-      quotas: { ...default11Quotas },
+      maxPlayers: 7,
+      captainPlayerId: 'player-2', // Asif
+      captainName: 'Asif',
+      quotas: { ...default6Quotas },
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -116,10 +117,12 @@ export function createSampleDraftData(): {
       name: 'Prime Brothers Cricket XI',
       shortName: 'PBCXI',
       logoUrl: TEAM_DEFAULT_LOGOS['team-prime'],
-      primaryColor: '#D97706',
-      secondaryColor: '#FEF3C7',
-      maxPlayers: 11,
-      quotas: { ...default11Quotas },
+      primaryColor: '#EA580C',
+      secondaryColor: '#FFEDD5',
+      maxPlayers: 7,
+      captainPlayerId: 'player-1', // Kazi Shahin
+      captainName: 'Kazi Shahin',
+      quotas: { ...default6Quotas },
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -130,10 +133,54 @@ export function createSampleDraftData(): {
       name: 'The Crown Kings',
       shortName: 'TCK',
       logoUrl: TEAM_DEFAULT_LOGOS['team-kings'],
-      primaryColor: '#7C3AED',
-      secondaryColor: '#EDE9FE',
-      maxPlayers: 11,
-      quotas: { ...default11Quotas },
+      primaryColor: '#EAB308',
+      secondaryColor: '#FEF08A',
+      maxPlayers: 7,
+      captainPlayerId: 'player-5', // Mostafizur
+      captainName: 'Mostafizur Rahman',
+      quotas: { ...default6Quotas },
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'team-titans',
+      draftId,
+      name: 'Brothers Titans',
+      shortName: 'BT',
+      logoUrl: TEAM_DEFAULT_LOGOS['team-titans'],
+      primaryColor: '#2563EB',
+      secondaryColor: '#DBEAFE',
+      maxPlayers: 7,
+      quotas: { ...default6Quotas },
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'team-strikers',
+      draftId,
+      name: 'Brothers Strikers',
+      shortName: 'BS',
+      logoUrl: TEAM_DEFAULT_LOGOS['team-strikers'],
+      primaryColor: '#DC2626',
+      secondaryColor: '#FEE2E2',
+      maxPlayers: 7,
+      quotas: { ...default6Quotas },
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'team-challengers',
+      draftId,
+      name: 'Brothers Challengers',
+      shortName: 'BC',
+      logoUrl: TEAM_DEFAULT_LOGOS['team-challengers'],
+      primaryColor: '#0D9488',
+      secondaryColor: '#CCFBF1',
+      maxPlayers: 7,
+      quotas: { ...default6Quotas },
       active: true,
       createdAt: now,
       updatedAt: now,

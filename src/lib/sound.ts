@@ -159,6 +159,75 @@ class SoundManager {
       });
     } catch {}
   }
+
+  // Play crowd cheer / stadium applause
+  playCheer() {
+    if (!this.enabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      // Synthesize applause with filtered pink noise burst
+      const bufferSize = ctx.sampleRate * 1.5;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let lastOut = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        data[i] = (lastOut + 0.02 * white) / 1.02;
+        lastOut = data[i];
+        data[i] *= 3.5;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1000, ctx.currentTime);
+      filter.Q.setValueAtTime(1.2, ctx.currentTime);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.01, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noise.start();
+      noise.stop(ctx.currentTime + 1.5);
+    } catch {}
+  }
+
+  // Announce text using browser Speech Synthesis (Voice announcement)
+  speak(text: string) {
+    if (!this.enabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.05;
+      utterance.volume = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const engVoice = voices.find(
+        (v) =>
+          v.lang.startsWith('en') &&
+          (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('English') || v.name.includes('Samantha'))
+      );
+      if (engVoice) {
+        utterance.voice = engVoice;
+      }
+      window.speechSynthesis.speak(utterance);
+    } catch {}
+  }
+
+  // Cancel any ongoing speech
+  cancelSpeech() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
 }
 
 export const soundManager = new SoundManager();

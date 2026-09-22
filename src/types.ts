@@ -33,6 +33,7 @@ export interface Player {
   status: PlayerStatus;
   assignedTeamId?: string;
   assignedCategoryId?: string;
+  isCaptain?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -45,7 +46,9 @@ export interface Team {
   logoUrl?: string;
   primaryColor: string;
   secondaryColor: string;
-  maxPlayers: number; // default 11
+  maxPlayers: number; // default 7 or 11
+  captainPlayerId?: string;
+  captainName?: string;
   quotas: Record<string, number>; // categoryId -> target count
   active: boolean;
   createdAt: number;

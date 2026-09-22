@@ -63,10 +63,10 @@ export default function App() {
     try {
       setIsLoading(true);
       const allDrafts = await db.getAllDrafts();
-      const officialSeedKey = 'bpl_seeded_v2_official_sheet_41';
+      const officialSeedKey = 'bpl_seeded_v3_official_6teams_41';
 
       if (allDrafts.length === 0 || localStorage.getItem(officialSeedKey) !== 'true') {
-        // Initialize with official BPL Season-2 dataset from user's official sheet!
+        // Initialize with official BPL Season-2 dataset with 6 teams!
         const sample = createSampleDraftData();
         await db.saveDraft(sample.draft);
         await db.bulkSaveCategories(sample.categories);
@@ -495,7 +495,13 @@ export default function App() {
         />
 
         {/* View Page Router */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main
+          className={`flex-1 w-full mx-auto ${
+            currentView === 'live'
+              ? 'p-2 sm:p-3 md:p-4 max-w-[1600px]'
+              : 'p-4 md:p-6 lg:p-8 max-w-7xl'
+          }`}
+        >
           {currentView === 'dashboard' && (
             <DashboardView
               drafts={drafts}

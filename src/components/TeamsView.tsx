@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Sparkles,
   Layers,
+  Crown,
 } from 'lucide-react';
 import { Category, Player, Team } from '../types';
 import { fileToDataUrl } from '../lib/imageUtils';
@@ -214,13 +215,19 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                         <h3 className="font-extrabold text-base text-[#061A36] leading-tight truncate">
                           {team.name}
                         </h3>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
                           <span className="text-xs font-bold text-slate-500">
                             Code: {team.shortName}
                           </span>
                           <span className="text-[11px] font-extrabold px-2 py-0.2 rounded bg-slate-100 text-slate-700">
                             Quota: {maxCap} Players
                           </span>
+                          {team.captainName && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300">
+                              <Crown className="w-3 h-3 text-amber-500" />
+                              Captain: {team.captainName}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -490,6 +497,67 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                   />
                   <p className="text-[11px] text-slate-500 mt-1">
                     Standard BPL squad size is 11 players.
+                  </p>
+                </div>
+
+                {/* Team Captain Selector */}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Crown className="w-4 h-4 text-amber-500" />
+                      Team Captain
+                    </label>
+                    {editingTeam.captainPlayerId && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingTeam({
+                            ...editingTeam,
+                            captainPlayerId: undefined,
+                            captainName: undefined,
+                          })
+                        }
+                        className="text-[11px] text-red-500 hover:underline"
+                      >
+                        Clear Captain
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    value={editingTeam.captainPlayerId || ''}
+                    onChange={(e) => {
+                      const pId = e.target.value;
+                      if (!pId) {
+                        setEditingTeam({
+                          ...editingTeam,
+                          captainPlayerId: undefined,
+                          captainName: undefined,
+                        });
+                      } else {
+                        const found = players.find((p) => p.id === pId);
+                        setEditingTeam({
+                          ...editingTeam,
+                          captainPlayerId: pId,
+                          captainName: found ? found.fullName : '',
+                        });
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#1283E6] font-medium text-slate-800"
+                  >
+                    <option value="">-- No Captain Selected --</option>
+                    {players.map((p) => {
+                      const isAssignedToThis = p.assignedTeamId === editingTeam.id;
+                      const cat = categories.find((c) => c.id === p.primaryCategoryId);
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {p.fullName} {isAssignedToThis ? '★ (Drafted in this team)' : ''} (
+                          {cat ? cat.name : p.playerType})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Select any player to lead this franchise team as official Captain.
                   </p>
                 </div>
 
