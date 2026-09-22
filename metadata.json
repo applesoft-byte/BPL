@@ -1,0 +1,6 @@
+{
+  "name": "BPL Season-2 Player Draft",
+  "description": "Official Brothers Premier League (BPL) Season-2 cricket player draft lottery, live orbit wheel animation, team rosters, and offline draft management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
