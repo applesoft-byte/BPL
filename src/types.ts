@@ -139,3 +139,29 @@ export interface PdfExportOptions {
   includeSummaryTable: boolean;
   orientation: 'p' | 'l'; // portrait or landscape
 }
+
+export interface AppUser {
+  id: string;
+  fullName: string;
+  mobile: string; // e.g. '01878113798' or '+8801878113798'
+  email?: string;
+  referenceNumber: string;
+  passwordHash: string;
+  role: 'superadmin' | 'admin' | 'organizer';
+  status: 'active' | 'suspended';
+  createdAt: number;
+  lastLoginAt: number;
+}
+
+export interface ReferenceNumber {
+  id: string;
+  code: string;
+  label: string;
+  maxUses: number;
+  usedCount: number;
+  usedByMobiles: string[];
+  status: 'active' | 'used' | 'revoked';
+  createdAt: number;
+  createdBy: string;
+  notes?: string;
+}

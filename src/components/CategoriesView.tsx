@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Plus, Edit2, Trash2, ArrowUp, ArrowDown, Zap } from 'lucide-react';
+import { Layers, Plus, Edit2, Trash2, ArrowUp, ArrowDown, Zap, RotateCcw } from 'lucide-react';
 import { Category } from '../types';
 
 interface CategoriesViewProps {
@@ -8,6 +8,7 @@ interface CategoriesViewProps {
   onSaveCategory: (category: Category) => Promise<void>;
   onBulkSaveCategories: (categories: Category[]) => Promise<void>;
   onDeleteCategory: (categoryId: string) => Promise<void>;
+  onResetToDefaults?: () => Promise<void>;
 }
 
 export const CategoriesView: React.FC<CategoriesViewProps> = ({
@@ -16,9 +17,11 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   onSaveCategory,
   onBulkSaveCategories,
   onDeleteCategory,
+  onResetToDefaults,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleOpenAdd = () => {
     setEditingCategory({
@@ -84,13 +87,40 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#1283E6] hover:bg-[#0A5DB8] text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          Add Category
-        </button>
+        <div className="flex items-center gap-2">
+          {onResetToDefaults && (
+            <button
+              disabled={isResetting}
+              onClick={async () => {
+                if (
+                  confirm(
+                    'Reset categories and player mappings to the official Tournament Photo defaults (10 English categories)?'
+                  )
+                ) {
+                  try {
+                    setIsResetting(true);
+                    await onResetToDefaults();
+                  } finally {
+                    setIsResetting(false);
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-300 transition-all active:scale-95 disabled:opacity-50"
+              title="Reset to 10 Official Categories from Tournament Photo"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
+              Reset to Photo Defaults
+            </button>
+          )}
+
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#1283E6] hover:bg-[#0A5DB8] text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            Add Category
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">

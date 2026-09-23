@@ -276,6 +276,42 @@ export const firebaseDb = {
     }
   },
 
+  async deletePlayer(playerId: string): Promise<void> {
+    const path = `players/${playerId}`;
+    try {
+      await deleteDoc(doc(db, 'players', playerId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  async deleteTeam(teamId: string): Promise<void> {
+    const path = `teams/${teamId}`;
+    try {
+      await deleteDoc(doc(db, 'teams', teamId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  async deleteCategory(categoryId: string): Promise<void> {
+    const path = `categories/${categoryId}`;
+    try {
+      await deleteDoc(doc(db, 'categories', categoryId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  async deletePick(pickId: string): Promise<void> {
+    const path = `picks/${pickId}`;
+    try {
+      await deleteDoc(doc(db, 'picks', pickId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
   // --- Real-time Subscriptions ---
   subscribeDraft(draftId: string, onUpdate: (draft: Draft | null) => void): Unsubscribe {
     const path = `drafts/${draftId}`;

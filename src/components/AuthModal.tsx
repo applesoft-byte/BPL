@@ -3,232 +3,708 @@ import {
   X,
   LogIn,
   LogOut,
-  ShieldCheck,
+  UserPlus,
+  KeyRound,
+  Phone,
+  Lock,
   User,
-  Sparkles,
-  Cloud,
-  CheckCircle2,
+  ShieldCheck,
   AlertCircle,
-  Loader2,
+  CheckCircle2,
+  PhoneCall,
   Crown,
+  Sparkles,
+  ArrowRight,
+  HelpCircle,
+  Copy,
+  Check,
 } from 'lucide-react';
-import { signInWithGoogle, logOut } from '../lib/firebase';
-import { AppUserProfile, ADMIN_EMAIL } from '../lib/firebaseDb';
-import { User as FirebaseUser } from 'firebase/auth';
+import { AppUser } from '../types';
+import {
+  authService,
+  SUPERADMIN_MOBILE,
+  SUPERADMIN_NAME,
+  SUPERADMIN_EMAIL,
+} from '../lib/authService';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentUser: FirebaseUser | null;
-  userProfile: AppUserProfile | null;
-  onSyncToCloud?: () => Promise<void>;
-  isSyncing?: boolean;
+  currentUser: AppUser | null;
+  onUserChange: (user: AppUser | null) => void;
+  onOpenSuperadminPortal?: () => void;
 }
+
+type AuthMode = 'login' | 'register' | 'forgot_request' | 'forgot_verify';
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   currentUser,
-  userProfile,
-  onSyncToCloud,
-  isSyncing = false,
+  onUserChange,
+  onOpenSuperadminPortal,
 }) => {
+  const [mode, setMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Form Fields
+  const [fullName, setFullName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [email, setEmail] = useState('');
+  const [referenceNumber, setReferenceNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Forgot Password OTP flow state
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [activeOtpCode, setActiveOtpCode] = useState<string | null>(null);
+  const [enteredOtp, setEnteredOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+  const [copiedPhone, setCopiedPhone] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSignIn = async () => {
+  const handleCopyPhone = () => {
+    navigator.clipboard.writeText('+8801878113798');
+    setCopiedPhone(true);
+    setTimeout(() => setCopiedPhone(false), 2000);
+  };
+
+  // 1. Handle Registration
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!referenceNumber.trim()) {
+      setError('Reference Number is required. For Reference Number, please contact Arif Iquebal at +8801878113798.');
+      return;
+    }
+    if (!fullName.trim()) {
+      setError('Please enter your full name or organizer name.');
+      return;
+    }
+    if (!mobile.trim() || mobile.replace(/\D/g, '').length < 10) {
+      setError('Please enter a valid 11-digit mobile number.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     try {
       setLoading(true);
-      setError(null);
-      await signInWithGoogle();
-      onClose();
+      const user = await authService.registerUser({
+        fullName: fullName.trim(),
+        mobile: mobile.trim(),
+        email: email.trim() || undefined,
+        referenceNumber: referenceNumber.trim(),
+        password,
+      });
+
+      onUserChange(user);
+      setSuccessMessage('Account created successfully! Welcome to BPL Season-2.');
+      setTimeout(() => {
+        onClose();
+      }, 1000);
     } catch (err: unknown) {
-      console.error('Sign in error:', err);
-      setError(err instanceof Error ? err.message : 'Sign-in failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'Registration failed. Please check your Reference Number.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignOut = async () => {
+  // 2. Handle Login
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!mobile.trim()) {
+      setError('Please enter your registered mobile number or email.');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password.');
+      return;
+    }
+
     try {
       setLoading(true);
-      setError(null);
-      await logOut();
-      onClose();
+      const user = await authService.loginUser({
+        identifier: mobile.trim(),
+        password,
+      });
+
+      onUserChange(user);
+      setSuccessMessage(`Welcome back, ${user.fullName}!`);
+      setTimeout(() => {
+        onClose();
+      }, 800);
     } catch (err: unknown) {
-      console.error('Sign out error:', err);
-      setError(err instanceof Error ? err.message : 'Sign-out failed.');
+      setError(err instanceof Error ? err.message : 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
-  const isAdmin = currentUser?.email === ADMIN_EMAIL || userProfile?.role === 'admin';
+  // 3. Request OTP for Password Reset
+  const handleRequestOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!forgotIdentifier.trim()) {
+      setError('Please enter your registered mobile number or email.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await authService.requestPasswordResetOtp(forgotIdentifier.trim());
+      setActiveOtpCode(result.otp);
+      setMode('forgot_verify');
+      setSuccessMessage(`OTP verification code generated for ${result.target}. Enter the 6-digit code below.`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to find registered account.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Verify OTP & Set New Password
+  const handleVerifyOtpAndReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!enteredOtp.trim()) {
+      setError('Please enter the 6-digit OTP code.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError('New passwords do not match.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const user = await authService.verifyOtpAndResetPassword({
+        identifier: forgotIdentifier.trim(),
+        otp: enteredOtp.trim(),
+        newPassword,
+      });
+
+      onUserChange(user);
+      setSuccessMessage('Password successfully updated! You are now logged in.');
+      setTimeout(() => {
+        onClose();
+      }, 1000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'OTP verification failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    authService.logout();
+    onUserChange(null);
+    onClose();
+  };
+
+  const isSuperadmin =
+    currentUser?.role === 'superadmin' ||
+    authService.isSuperadmin(currentUser?.mobile || '') ||
+    authService.isSuperadmin(currentUser?.email || '');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header Ribbon */}
-        <div className="bg-gradient-to-r from-[#061A36] to-[#0A5DB8] px-6 py-5 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-[#061A36] via-[#0A5DB8] to-[#0264D4] px-6 py-5 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
-              <Cloud className="w-5 h-5 text-emerald-400" />
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 shadow-inner">
+              {currentUser ? (
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              ) : (
+                <Lock className="w-5 h-5 text-amber-400" />
+              )}
             </div>
             <div>
-              <h3 className="text-lg font-extrabold tracking-tight">
-                {currentUser ? 'Organizer Account' : 'Sign In to BPL Draft'}
+              <h3 className="text-base sm:text-lg font-black tracking-tight">
+                {currentUser
+                  ? 'Organizer Profile'
+                  : mode === 'register'
+                  ? 'Create Organizer Account'
+                  : mode.startsWith('forgot')
+                  ? 'Reset Forgotten Password'
+                  : 'Organizer Sign In'}
               </h3>
-              <p className="text-xs text-slate-300">
-                {currentUser ? 'Firebase Cloud Connected' : 'Save & synchronize draft across devices'}
+              <p className="text-xs text-blue-100">
+                {currentUser
+                  ? 'BPL Season-2 Authenticated Session'
+                  : 'Sign in with Mobile & Reference Number'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            className="p-1.5 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 space-y-6">
+        {/* Scrollable Content */}
+        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+          {/* Messages */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700">
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-xs text-rose-800 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed font-semibold">{error}</div>
             </div>
           )}
 
+          {successMessage && (
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-2.5 text-xs text-emerald-800 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed font-semibold">{successMessage}</div>
+            </div>
+          )}
+
+          {/* ACTIVE USER VIEW */}
           {currentUser ? (
             <div className="space-y-5">
-              {/* Signed In Profile Card */}
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
-                {currentUser.photoURL ? (
-                  <img
-                    src={currentUser.photoURL}
-                    alt={currentUser.displayName || 'User'}
-                    className="w-14 h-14 rounded-full border-2 border-[#1283E6] object-cover shadow-xs"
-                  />
-                ) : (
-                  <div className="w-14 h-14 rounded-full bg-[#061A36] text-white flex items-center justify-center text-xl font-bold">
-                    {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-[#061A36] text-white flex items-center justify-center font-bold text-sm">
+                      {currentUser.fullName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-[#061A36]">
+                        {currentUser.fullName}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-mono">
+                        Mobile: +88{currentUser.mobile}
+                      </p>
+                    </div>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-extrabold text-slate-900 truncate">
-                      {currentUser.displayName || 'BPL Organizer'}
-                    </h4>
-                    {isAdmin && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
-                        <Crown className="w-3 h-3 text-amber-600" />
-                        ADMIN
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 truncate">{currentUser.email}</p>
-                  <div className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Firebase Firestore Active</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Benefits list */}
-              <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-xl p-3.5 space-y-2 text-xs text-slate-700">
-                <div className="font-bold text-emerald-900 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  Cloud Database Features Active:
-                </div>
-                <ul className="space-y-1 text-[11px] text-slate-600 pl-5 list-disc">
-                  <li>Real-time multi-device synchronization</li>
-                  <li>Live auction/lottery draft updates pushed instantly</li>
-                  <li>Permanent cloud backups for all 6 franchise teams & 41 players</li>
-                </ul>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2.5">
-                {onSyncToCloud && (
-                  <button
-                    onClick={onSyncToCloud}
-                    disabled={isSyncing}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#0A5DB8] hover:bg-[#084B96] text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50"
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      isSuperadmin
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                        : 'bg-blue-100 text-blue-900 border border-blue-200'
+                    }`}
                   >
-                    {isSyncing ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Cloud className="w-4 h-4" />
-                    )}
-                    <span>{isSyncing ? 'Syncing to Cloud...' : 'Sync Current Draft to Firebase'}</span>
-                  </button>
-                )}
+                    {isSuperadmin ? 'SUPERADMIN' : currentUser.role}
+                  </span>
+                </div>
 
-                <button
-                  onClick={handleSignOut}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all"
-                >
-                  <LogOut className="w-4 h-4 text-slate-500" />
-                  <span>Sign Out</span>
-                </button>
+                <div className="text-xs text-slate-600 pt-2 border-t border-slate-200 grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Reference Number:</span>
+                    <span className="font-mono font-black text-slate-800">
+                      {currentUser.referenceNumber || 'N/A'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Status:</span>
+                    <span className="text-emerald-700 font-bold capitalize">Active & Synced</span>
+                  </div>
+                </div>
               </div>
+
+              {isSuperadmin && onOpenSuperadminPortal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenSuperadminPortal();
+                  }}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-[#FF7A2E] hover:from-amber-600 hover:to-[#e66c24] text-white font-black text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>Open Superadmin Reference Portal</span>
+                  <ArrowRight className="w-4 h-4 ml-auto" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log Out</span>
+              </button>
             </div>
           ) : (
-            <div className="space-y-5">
-              <div className="text-center space-y-2">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 mx-auto flex items-center justify-center text-[#0A5DB8]">
-                  <Sparkles className="w-6 h-6" />
+            <>
+              {/* TAB SELECTOR (LOGIN vs REGISTER) */}
+              {mode !== 'forgot_request' && mode !== 'forgot_verify' && (
+                <div className="flex p-1 bg-slate-100 rounded-2xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('login');
+                      setError(null);
+                    }}
+                    className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+                      mode === 'login'
+                        ? 'bg-white text-[#061A36] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('register');
+                      setError(null);
+                    }}
+                    className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+                      mode === 'register'
+                        ? 'bg-white text-[#061A36] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Create Account
+                  </button>
                 </div>
-                <h4 className="text-base font-bold text-slate-800">
-                  Access Cloud Database & Real-Time Sync
-                </h4>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Sign in with your Google account to manage drafts, live stream lottery picks, and sync team rosters automatically to Firebase Firestore.
-                </p>
-              </div>
+              )}
 
-              <div className="border-t border-slate-100 pt-4">
-                <button
-                  onClick={handleSignIn}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold text-sm shadow-xs transition-all hover:border-slate-300 active:scale-[0.99] disabled:opacity-60"
-                >
-                  {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-[#0A5DB8]" />
-                  ) : (
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              {/* 1. SIGN IN FORM */}
+              {mode === 'login' && (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Registered Mobile Number or Email</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 01878113798 or email@example.com"
+                      value={mobile}
+                      onChange={(e) => setMobile(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#1283E6] focus:bg-white outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Password</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotIdentifier(mobile);
+                          setMode('forgot_request');
+                          setError(null);
+                        }}
+                        className="text-[11px] font-bold text-[#1283E6] hover:underline"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#1283E6] focus:bg-white outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 bg-[#0A5DB8] hover:bg-[#061A36] text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+                  </button>
+
+                  <div className="pt-2 text-center text-xs text-slate-500">
+                    Need a Reference Number to create an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setMode('register')}
+                      className="font-bold text-[#1283E6] hover:underline"
+                    >
+                      Create Account
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* 2. REGISTRATION FORM */}
+              {mode === 'register' && (
+                <form onSubmit={handleRegister} className="space-y-4">
+                  {/* Reference Number Field with Arif Iquebal Notice */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Reference Number *</span>
+                      </label>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Enter Reference Number (e.g. BPL-ARIF-VIP)"
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value.toUpperCase())}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-amber-50/40 border border-amber-300 rounded-xl text-xs font-mono font-bold uppercase tracking-wider text-[#061A36] focus:ring-2 focus:ring-amber-500 outline-none"
+                    />
+
+                    {/* Prominent English Notice per instructions */}
+                    <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[#061A36] flex items-center gap-1.5 text-[11px]">
+                          <HelpCircle className="w-3.5 h-3.5 text-[#1283E6]" />
+                          For Reference Number, please contact Arif Iquebal at +8801878113798
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <a
+                          href="tel:+8801878113798"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0A5DB8] text-white text-[10px] font-bold rounded-lg hover:bg-[#061A36] transition-colors"
+                        >
+                          <PhoneCall className="w-3 h-3" />
+                          <span>Call +8801878113798</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={handleCopyPhone}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-white text-slate-700 border border-slate-300 text-[10px] font-bold rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                          {copiedPhone ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span className="text-emerald-700">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Copy Number</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Organizer Name */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Full Name / Organizer Name *</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Tanvir Hasan"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#1283E6] focus:bg-white outline-none"
+                    />
+                  </div>
+
+                  {/* Mobile Number */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Mobile Number *</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 01700000000"
+                      value={mobile}
+                      onChange={(e) => setMobile(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-[#1283E6] focus:bg-white outline-none"
+                    />
+                  </div>
+
+                  {/* Password & Confirm Password */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Password *</label>
+                      <input
+                        type="password"
+                        placeholder="At least 6 chars"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#1283E6] focus:bg-white outline-none"
                       />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Confirm Password *</label>
+                      <input
+                        type="password"
+                        placeholder="Re-enter password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#1283E6] focus:bg-white outline-none"
                       />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                      />
-                    </svg>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 bg-[#1283E6] hover:bg-[#0A5DB8] text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>{loading ? 'Validating & Creating...' : 'Create Account'}</span>
+                  </button>
+                </form>
+              )}
+
+              {/* 3. FORGOT PASSWORD - STEP 1: REQUEST OTP */}
+              {mode === 'forgot_request' && (
+                <form onSubmit={handleRequestOtp} className="space-y-4">
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    Enter your registered mobile number or email. We will send a 6-digit verification OTP code to reset your password.
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Registered Mobile or Email</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 01878113798"
+                      value={forgotIdentifier}
+                      onChange={(e) => setForgotIdentifier(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#1283E6] outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMode('login')}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                    >
+                      Back to Sign In
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 py-2.5 bg-[#0A5DB8] hover:bg-[#061A36] text-white font-bold text-xs rounded-xl shadow-xs"
+                    >
+                      {loading ? 'Sending OTP...' : 'Send OTP Code'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* 4. FORGOT PASSWORD - STEP 2: VERIFY OTP & SET NEW PASSWORD */}
+              {mode === 'forgot_verify' && (
+                <form onSubmit={handleVerifyOtpAndReset} className="space-y-4">
+                  {/* OTP In-App Notification preview */}
+                  {activeOtpCode && (
+                    <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-emerald-900 flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                          OTP Verification Code Received:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setEnteredOtp(activeOtpCode)}
+                          className="text-[11px] font-black text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded-lg"
+                        >
+                          Auto-Fill OTP
+                        </button>
+                      </div>
+                      <div className="p-2 bg-white rounded-xl text-center font-mono font-black text-xl text-[#061A36] tracking-widest border border-emerald-200">
+                        {activeOtpCode}
+                      </div>
+                    </div>
                   )}
-                  <span>Sign in with Google</span>
-                </button>
-              </div>
 
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60 text-[11px] text-slate-500 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Authorized organizers get instant real-time admin rights and cloud sync.</span>
-              </div>
-            </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Enter 6-Digit OTP</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="6-digit code"
+                      value={enteredOtp}
+                      onChange={(e) => setEnteredOtp(e.target.value.replace(/\D/g, ''))}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono font-bold tracking-widest text-center focus:ring-2 focus:ring-[#1283E6] outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">New Password</label>
+                    <input
+                      type="password"
+                      placeholder="At least 6 characters"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#1283E6] outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Confirm New Password</label>
+                    <input
+                      type="password"
+                      placeholder="Re-enter new password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#1283E6] outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMode('forgot_request')}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                    >
+                      Resend OTP
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs"
+                    >
+                      {loading ? 'Updating Password...' : 'Save & Login'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </>
           )}
         </div>
       </div>

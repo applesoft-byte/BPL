@@ -231,7 +231,7 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
         return true;
       }
 
-      const quota = t.quotas[activeCategoryId] ?? 0;
+      const quota = t.quotas[activeCategoryId] ?? 1;
       const draftedInCat = teamPlayers.filter(
         (p) =>
           p.primaryCategoryId === activeCategoryId || p.assignedCategoryId === activeCategoryId

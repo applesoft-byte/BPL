@@ -2,205 +2,55 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default Deny All
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Hardened Helper Primitives
+    // Helper Primitives
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
-    function incoming() {
-      return request.resource.data;
+    // --- Reference Numbers Collection (Superadmin & Registration Validation) ---
+    match /reference_numbers/{refId} {
+      allow read: if true;
+      allow write: if true;
     }
 
-    function existing() {
-      return resource.data;
+    // --- App Users Collection (Mobile + Ref + Password Accounts) ---
+    match /app_users/{userId} {
+      allow read: if true;
+      allow write: if true;
     }
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isVerifiedUser() {
-      return isSignedIn() && (
-        request.auth.token.email_verified == true ||
-        request.auth.token.firebase.sign_in_provider == 'google.com'
-      );
-    }
-
-    function isBootstrappedAdmin() {
-      return isVerifiedUser() && request.auth.token.email == 'arif4egroup@gmail.com';
-    }
-
-    function isAdmin() {
-      return isBootstrappedAdmin() || (
-        isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
-    }
-
-    function isOwner(uid) {
-      return isVerifiedUser() && request.auth.uid == uid;
-    }
-
-    // --- Entity Validators ---
-
-    function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'role']) &&
-        data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt']) &&
-        data.uid is string && data.uid.size() <= 128 &&
-        data.email is string && data.email.size() <= 256 &&
-        data.role in ['admin', 'organizer', 'viewer'];
-    }
-
-    function isValidDraft(data) {
-      return data.keys().hasAll(['id', 'name', 'season', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
-        data.keys().hasOnly([
-          'id', 'name', 'season', 'status', 'logoUrl', 'draftDate',
-          'organizerName', 'organizerRole', 'slogan', 'subSlogan', 'tagline',
-          'defaultPlayerQuota', 'currentCategoryId', 'settings', 'ownerId',
-          'createdAt', 'updatedAt', 'startedAt', 'completedAt'
-        ]) &&
-        data.id is string && data.id.size() <= 128 &&
-        data.name is string && data.name.size() <= 128 &&
-        data.season is string && data.season.size() <= 64 &&
-        data.status in ['setup', 'ready', 'live', 'paused', 'completed'] &&
-        data.ownerId is string && data.ownerId.size() <= 128 &&
-        data.createdAt is number &&
-        data.updatedAt is number;
-    }
-
-    function isValidTeam(data) {
-      return data.keys().hasAll(['id', 'draftId', 'name', 'shortName', 'ownerId', 'createdAt', 'updatedAt']) &&
-        data.keys().hasOnly([
-          'id', 'draftId', 'name', 'shortName', 'logoUrl', 'primaryColor',
-          'secondaryColor', 'maxPlayers', 'captainPlayerId', 'captainName',
-          'quotas', 'active', 'ownerId', 'createdAt', 'updatedAt'
-        ]) &&
-        data.id is string && data.id.size() <= 128 &&
-        data.draftId is string && data.draftId.size() <= 128 &&
-        data.name is string && data.name.size() <= 128 &&
-        data.shortName is string && data.shortName.size() <= 16 &&
-        data.ownerId is string && data.ownerId.size() <= 128 &&
-        data.createdAt is number &&
-        data.updatedAt is number;
-    }
-
-    function isValidPlayer(data) {
-      return data.keys().hasAll(['id', 'draftId', 'fullName', 'primaryCategoryId', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
-        data.keys().hasOnly([
-          'id', 'draftId', 'fullName', 'jerseyNumber', 'primaryCategoryId',
-          'secondaryCategoryId', 'playerType', 'battingStyle', 'bowlingStyle',
-          'badge', 'photoUrl', 'inDraftPool', 'contactEmail', 'notes',
-          'status', 'assignedTeamId', 'assignedCategoryId', 'isCaptain',
-          'ownerId', 'createdAt', 'updatedAt'
-        ]) &&
-        data.id is string && data.id.size() <= 128 &&
-        data.draftId is string && data.draftId.size() <= 128 &&
-        data.fullName is string && data.fullName.size() <= 128 &&
-        data.primaryCategoryId is string && data.primaryCategoryId.size() <= 128 &&
-        data.status in ['available', 'drafted', 'inactive'] &&
-        data.ownerId is string && data.ownerId.size() <= 128 &&
-        data.createdAt is number &&
-        data.updatedAt is number;
-    }
-
-    function isValidCategory(data) {
-      return data.keys().hasAll(['id', 'draftId', 'name', 'order', 'ownerId', 'createdAt', 'updatedAt']) &&
-        data.keys().hasOnly([
-          'id', 'draftId', 'name', 'color', 'iconName', 'order',
-          'active', 'ownerId', 'createdAt', 'updatedAt'
-        ]) &&
-        data.id is string && data.id.size() <= 128 &&
-        data.draftId is string && data.draftId.size() <= 128 &&
-        data.name is string && data.name.size() <= 64 &&
-        data.order is number &&
-        data.ownerId is string && data.ownerId.size() <= 128 &&
-        data.createdAt is number &&
-        data.updatedAt is number;
-    }
-
-    function isValidPick(data) {
-      return data.keys().hasAll(['id', 'draftId', 'sequence', 'playerId', 'teamId', 'categoryId', 'ownerId', 'createdAt']) &&
-        data.keys().hasOnly([
-          'id', 'draftId', 'sequence', 'playerId', 'teamId',
-          'categoryId', 'ownerId', 'createdAt'
-        ]) &&
-        data.id is string && data.id.size() <= 128 &&
-        data.draftId is string && data.draftId.size() <= 128 &&
-        data.sequence is number &&
-        data.playerId is string && data.playerId.size() <= 128 &&
-        data.teamId is string && data.teamId.size() <= 128 &&
-        data.categoryId is string && data.categoryId.size() <= 128 &&
-        data.ownerId is string && data.ownerId.size() <= 128 &&
-        data.createdAt is number;
-    }
-
-    // --- Users Collection ---
+    // --- Legacy Users & Admins Collection ---
     match /users/{userId} {
-      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
-      allow list: if isAdmin();
-      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) && incoming().uid == request.auth.uid;
-      allow update: if isValidId(userId) && (isOwner(userId) || isAdmin()) && isValidUser(incoming()) && incoming().uid == existing().uid;
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    // --- Admins Collection ---
     match /admins/{adminId} {
-      allow get: if isValidId(adminId) && isSignedIn();
-      allow list: if isAdmin();
-      allow write: if isBootstrappedAdmin();
+      allow read, write: if true;
     }
 
     // --- Drafts Collection ---
     match /drafts/{draftId} {
-      allow get: if isValidId(draftId);
-      allow list: if true;
-      allow create: if isValidId(draftId) && isVerifiedUser() && isValidDraft(incoming()) && incoming().ownerId == request.auth.uid;
-      allow update: if isValidId(draftId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid)) &&
-                    isValidDraft(incoming()) && incoming().ownerId == existing().ownerId;
-      allow delete: if isValidId(draftId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid));
+      allow read, write: if true;
     }
 
     // --- Teams Collection ---
     match /teams/{teamId} {
-      allow get: if isValidId(teamId);
-      allow list: if true;
-      allow create: if isValidId(teamId) && isVerifiedUser() && isValidTeam(incoming()) && incoming().ownerId == request.auth.uid;
-      allow update: if isValidId(teamId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid)) &&
-                    isValidTeam(incoming()) && incoming().ownerId == existing().ownerId;
-      allow delete: if isValidId(teamId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid));
+      allow read, write: if true;
     }
 
     // --- Players Collection ---
     match /players/{playerId} {
-      allow get: if isValidId(playerId);
-      allow list: if true;
-      allow create: if isValidId(playerId) && isVerifiedUser() && isValidPlayer(incoming()) && incoming().ownerId == request.auth.uid;
-      allow update: if isValidId(playerId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid)) &&
-                    isValidPlayer(incoming()) && incoming().ownerId == existing().ownerId;
-      allow delete: if isValidId(playerId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid));
+      allow read, write: if true;
     }
 
     // --- Categories Collection ---
     match /categories/{categoryId} {
-      allow get: if isValidId(categoryId);
-      allow list: if true;
-      allow create: if isValidId(categoryId) && isVerifiedUser() && isValidCategory(incoming()) && incoming().ownerId == request.auth.uid;
-      allow update: if isValidId(categoryId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid)) &&
-                    isValidCategory(incoming()) && incoming().ownerId == existing().ownerId;
-      allow delete: if isValidId(categoryId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid));
+      allow read, write: if true;
     }
 
     // --- Picks Collection ---
     match /picks/{pickId} {
-      allow get: if isValidId(pickId);
-      allow list: if true;
-      allow create: if isValidId(pickId) && isVerifiedUser() && isValidPick(incoming()) && incoming().ownerId == request.auth.uid;
-      allow update: if isValidId(pickId) && isAdmin() && isValidPick(incoming());
-      allow delete: if isValidId(pickId) && (isAdmin() || (isVerifiedUser() && existing().ownerId == request.auth.uid));
+      allow read, write: if true;
     }
   }
 }

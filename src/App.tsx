@@ -16,10 +16,12 @@ import { FinalResultsView } from './components/FinalResultsView';
 import { SettingsView } from './components/SettingsView';
 import { DraftPoolModal } from './components/DraftPoolModal';
 import { AuthModal } from './components/AuthModal';
+import { SuperadminReferenceModal } from './components/SuperadminReferenceModal';
 import { Loader2 } from 'lucide-react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { auth, testFirestoreConnection } from './lib/firebase';
-import { firebaseDb, AppUserProfile } from './lib/firebaseDb';
+import { testFirestoreConnection } from './lib/firebase';
+import { firebaseDb } from './lib/firebaseDb';
+import { AppUser } from './types';
+import { authService } from './lib/authService';
 
 export default function App() {
   // Navigation View State
@@ -30,10 +32,10 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isGlobalPoolModalOpen, setIsGlobalPoolModalOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isSuperadminPortalOpen, setIsSuperadminPortalOpen] = useState<boolean>(false);
 
-  // Firebase Auth & Cloud Sync State
-  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
+  // Mobile + Ref Number Auth & Cloud Sync State
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => authService.getCurrentUser());
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
   const [isSyncingToCloud, setIsSyncingToCloud] = useState<boolean>(false);
 
@@ -54,27 +56,15 @@ export default function App() {
   // Hidden file input ref for backup JSON restore
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  // Check connection to Firestore and listen to Firebase Auth
+  // Check connection to Firestore and initialize reference numbers
   useEffect(() => {
     testFirestoreConnection().then((ok) => {
       setIsCloudConnected(ok);
     });
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        try {
-          const profile = await firebaseDb.syncUserProfile(user);
-          setUserProfile(profile);
-        } catch (err) {
-          console.warn('Firebase user sync note:', err);
-        }
-      } else {
-        setUserProfile(null);
-      }
+    authService.initReferenceNumbers().catch((err) => {
+      console.warn('Init reference numbers note:', err);
     });
-
-    return () => unsubscribe();
   }, []);
 
   // Sync sound manager enabled
@@ -97,10 +87,10 @@ export default function App() {
     try {
       setIsLoading(true);
       const allDrafts = await db.getAllDrafts();
-      const officialSeedKey = 'bpl_seeded_v3_official_6teams_41';
+      const officialSeedKey = 'bpl_seeded_v7_rayhan_emon_61';
 
       if (allDrafts.length === 0 || localStorage.getItem(officialSeedKey) !== 'true') {
-        // Initialize with official BPL Season-2 dataset with 6 teams!
+        // Initialize or update with official BPL Season-2 dataset matching tournament photo (10 English categories & mapped roster)
         const sample = createSampleDraftData();
         await db.saveDraft(sample.draft);
         await db.bulkSaveCategories(sample.categories);
@@ -128,9 +118,18 @@ export default function App() {
           db.getPicks(selected.id),
         ]);
 
+        // Remove old unregistered Ashik Mahmud if present in existing database so total roster is exactly 61 players
+        const filteredDbPlayers = dbPlayers.filter((p) => {
+          if (p.fullName === 'Ashik Mahmud') {
+            db.deletePlayer(p.id).catch((err) => console.warn(err));
+            return false;
+          }
+          return true;
+        });
+
         // Ensure any player assigned as captain in a team is synced as drafted & assigned
         let playersNeedingUpdate = false;
-        const updatedPlayersList = dbPlayers.map((p) => {
+        const updatedPlayersList = filteredDbPlayers.map((p) => {
           const team = dbTeams.find(
             (t) => t.captainPlayerId === p.id || (t.captainName && t.captainName.toLowerCase() === p.fullName.toLowerCase())
           );
@@ -151,9 +150,27 @@ export default function App() {
           return p;
         });
 
-        if (playersNeedingUpdate) {
-          await db.bulkSavePlayers(updatedPlayersList);
-          setPlayers(updatedPlayersList);
+        // Also check if any existing player has 'Emon (Crown)' or 'Raihan Emon' and rename to 'Rayhan Emon'
+        let emonRenamed = false;
+        const mappedPlayers = updatedPlayersList.map((p) => {
+          if (p.fullName === 'Emon (Crown)' || p.fullName === 'Raihan Emon') {
+            emonRenamed = true;
+            return {
+              ...p,
+              fullName: 'Rayhan Emon',
+              battingStyle: 'Right Handed' as const,
+              bowlingStyle: 'Left Arm Spinner',
+              playerType: 'Right Handed • Left Arm Spinner',
+              notes: 'Bangla: রায়হান ইমন | Batsman Level-01',
+              updatedAt: Date.now(),
+            };
+          }
+          return p;
+        });
+
+        if (playersNeedingUpdate || emonRenamed || filteredDbPlayers.length !== dbPlayers.length) {
+          await db.bulkSavePlayers(mappedPlayers);
+          setPlayers(mappedPlayers);
         } else {
           setPlayers(dbPlayers);
         }
@@ -287,6 +304,32 @@ export default function App() {
     }
   };
 
+  // Reset Categories & Roster to Official Tournament Photo Defaults
+  const handleResetToOfficialDefaults = async () => {
+    const sample = createSampleDraftData();
+    await db.saveDraft(sample.draft);
+    await db.bulkSaveCategories(sample.categories);
+    await db.bulkSaveTeams(sample.teams);
+    await db.bulkSavePlayers(sample.players);
+    localStorage.setItem('bpl_seeded_v7_rayhan_emon_61', 'true');
+
+    setDrafts([sample.draft]);
+    setActiveDraftId(sample.draft.id);
+    setCategories(sample.categories);
+    setTeams(sample.teams);
+    setPlayers(sample.players);
+    setPicks([]);
+
+    if (currentUser) {
+      await Promise.all([
+        firebaseDb.saveDraft(sample.draft, currentUser.id),
+        firebaseDb.saveCategories(sample.categories, currentUser.id),
+        firebaseDb.saveTeams(sample.teams, currentUser.id),
+        firebaseDb.savePlayers(sample.players, currentUser.id),
+      ]).catch((err) => console.warn('Firebase sync error on reset:', err));
+    }
+  };
+
   // Duplicate Draft
   const handleDuplicateDraft = async (draftId: string) => {
     const orig = await db.exportFullDraft(draftId);
@@ -360,6 +403,14 @@ export default function App() {
     await db.savePick(pickRecord);
     await db.savePlayer(updatedPlayer);
 
+    // Sync to Cloud Firebase if logged in
+    if (currentUser) {
+      Promise.all([
+        firebaseDb.savePick(pickRecord, currentUser.id),
+        firebaseDb.savePlayers([updatedPlayer], currentUser.id),
+      ]).catch((err) => console.warn('Firebase pick sync error:', err));
+    }
+
     // Update state
     setPicks((prev) => [...prev, pickRecord]);
     setPlayers((prev) => prev.map((p) => (p.id === player.id ? updatedPlayer : p)));
@@ -373,6 +424,9 @@ export default function App() {
         updatedAt: now,
       };
       await db.saveDraft(updatedDraft);
+      if (currentUser) {
+        firebaseDb.saveDraft(updatedDraft, currentUser.id).catch((err) => console.warn(err));
+      }
       setDrafts((prev) => prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)));
     }
   };
@@ -383,8 +437,9 @@ export default function App() {
     const latestPick = picks[picks.length - 1];
 
     const playerToRestore = players.find((p) => p.id === latestPick.playerId);
+    let restoredPlayer: Player | undefined;
     if (playerToRestore) {
-      const restoredPlayer: Player = {
+      restoredPlayer = {
         ...playerToRestore,
         status: 'available',
         assignedTeamId: undefined,
@@ -392,10 +447,16 @@ export default function App() {
         updatedAt: Date.now(),
       };
       await db.savePlayer(restoredPlayer);
-      setPlayers((prev) => prev.map((p) => (p.id === restoredPlayer.id ? restoredPlayer : p)));
+      setPlayers((prev) => prev.map((p) => (p.id === restoredPlayer!.id ? restoredPlayer! : p)));
     }
 
     await db.deletePick(latestPick.id);
+    if (currentUser) {
+      Promise.all([
+        firebaseDb.deletePick(latestPick.id),
+        restoredPlayer ? firebaseDb.savePlayers([restoredPlayer], currentUser.id) : Promise.resolve(),
+      ]).catch((err) => console.warn('Firebase undo sync error:', err));
+    }
     setPicks((prev) => prev.slice(0, -1));
   };
 
@@ -430,7 +491,7 @@ export default function App() {
     await db.saveDraft(updatedDraft);
     setDrafts((prev) => prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)));
     if (currentUser) {
-      firebaseDb.saveDraft(updatedDraft, currentUser.uid).catch((err) => {
+      firebaseDb.saveDraft(updatedDraft, currentUser.id).catch((err) => {
         console.warn('Background cloud draft sync note:', err);
       });
     }
@@ -441,7 +502,7 @@ export default function App() {
     await db.bulkSavePlayers(updatedPlayers);
     setPlayers(updatedPlayers);
     if (currentUser) {
-      firebaseDb.savePlayers(updatedPlayers, currentUser.uid).catch((err) => {
+      firebaseDb.savePlayers(updatedPlayers, currentUser.id).catch((err) => {
         console.warn('Background cloud players sync note:', err);
       });
     }
@@ -457,7 +518,7 @@ export default function App() {
 
     try {
       setIsSyncingToCloud(true);
-      const uid = currentUser.uid;
+      const uid = currentUser.id;
       await firebaseDb.saveDraft(activeDraft, uid);
       await firebaseDb.saveCategories(categories, uid);
       await firebaseDb.saveTeams(teams, uid);
@@ -588,6 +649,7 @@ export default function App() {
           currentUser={currentUser}
           isCloudConnected={isCloudConnected}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenSuperadminPortal={() => setIsSuperadminPortalOpen(true)}
           onToggleSound={() => setSoundEnabled((prev) => !prev)}
           onOpenMobileSidebar={() => setMobileMenuOpen(true)}
           onNavigateToLive={() => setCurrentView('live')}
@@ -615,6 +677,7 @@ export default function App() {
               isCloudConnected={isCloudConnected}
               isSyncing={isSyncingToCloud}
               onOpenAuthModal={() => setIsAuthModalOpen(true)}
+              onOpenSuperadminPortal={() => setIsSuperadminPortalOpen(true)}
               onSyncToCloud={handleSyncToCloud}
               onSelectDraft={(id) => switchDraft(id)}
               onCreateNewDraft={handleCreateNewDraft}
@@ -638,6 +701,9 @@ export default function App() {
               activeDraftId={activeDraftId || 'bpl-main'}
               onSavePlayer={async (p) => {
                 await db.savePlayer(p);
+                if (currentUser) {
+                  firebaseDb.savePlayers([p], currentUser.id).catch((err) => console.warn(err));
+                }
                 setPlayers((prev) => {
                   const idx = prev.findIndex((item) => item.id === p.id);
                   if (idx !== -1) {
@@ -650,10 +716,16 @@ export default function App() {
               }}
               onBulkSavePlayers={async (newPlayers) => {
                 await db.bulkSavePlayers(newPlayers);
+                if (currentUser) {
+                  firebaseDb.savePlayers(newPlayers, currentUser.id).catch((err) => console.warn(err));
+                }
                 setPlayers((prev) => [...newPlayers, ...prev]);
               }}
               onDeletePlayer={async (pId) => {
                 await db.deletePlayer(pId);
+                if (currentUser) {
+                  firebaseDb.deletePlayer(pId).catch((err) => console.warn(err));
+                }
                 setPlayers((prev) => prev.filter((p) => p.id !== pId));
               }}
             />
@@ -695,6 +767,9 @@ export default function App() {
                       updatedAt: Date.now(),
                     };
                     await db.savePlayer(restoredOldCap);
+                    if (currentUser) {
+                      firebaseDb.savePlayers([restoredOldCap], currentUser.id).catch((err) => console.warn(err));
+                    }
                     setPlayers((prev) => prev.map((p) => (p.id === oldCaptainId ? restoredOldCap : p)));
                   }
                 }
@@ -713,16 +788,29 @@ export default function App() {
                       updatedAt: Date.now(),
                     };
                     await db.savePlayer(updatedNewCap);
+                    if (currentUser) {
+                      firebaseDb.savePlayers([updatedNewCap], currentUser.id).catch((err) => console.warn(err));
+                    }
                     setPlayers((prev) => prev.map((p) => (p.id === newCaptainId ? updatedNewCap : p)));
                   }
                 }
 
                 if (currentUser) {
-                  firebaseDb.saveTeams([t], currentUser.uid).catch((err) => console.warn(err));
+                  firebaseDb.saveTeams([t], currentUser.id).catch((err) => console.warn(err));
                 }
+              }}
+              onBulkSaveTeams={async (newTeams) => {
+                await db.bulkSaveTeams(newTeams);
+                if (currentUser) {
+                  firebaseDb.saveTeams(newTeams, currentUser.id).catch((err) => console.warn(err));
+                }
+                setTeams(newTeams);
               }}
               onDeleteTeam={async (tId) => {
                 await db.deleteTeam(tId);
+                if (currentUser) {
+                  firebaseDb.deleteTeam(tId).catch((err) => console.warn(err));
+                }
                 setTeams((prev) => prev.filter((t) => t.id !== tId));
               }}
             />
@@ -734,6 +822,9 @@ export default function App() {
               activeDraftId={activeDraftId || 'bpl-main'}
               onSaveCategory={async (c) => {
                 await db.saveCategory(c);
+                if (currentUser) {
+                  firebaseDb.saveCategories([c], currentUser.id).catch((err) => console.warn(err));
+                }
                 setCategories((prev) => {
                   const idx = prev.findIndex((item) => item.id === c.id);
                   if (idx !== -1) {
@@ -746,12 +837,19 @@ export default function App() {
               }}
               onBulkSaveCategories={async (newCats) => {
                 await db.bulkSaveCategories(newCats);
+                if (currentUser) {
+                  firebaseDb.saveCategories(newCats, currentUser.id).catch((err) => console.warn(err));
+                }
                 setCategories(newCats);
               }}
               onDeleteCategory={async (cId) => {
                 await db.deleteCategory(cId);
+                if (currentUser) {
+                  firebaseDb.deleteCategory(cId).catch((err) => console.warn(err));
+                }
                 setCategories((prev) => prev.filter((c) => c.id !== cId));
               }}
+              onResetToDefaults={handleResetToOfficialDefaults}
             />
           )}
 
@@ -838,14 +936,20 @@ export default function App() {
         />
       )}
 
-      {/* Firebase Cloud Authentication Modal */}
+      {/* Superadmin Reference Numbers & Organizers Portal */}
+      <SuperadminReferenceModal
+        isOpen={isSuperadminPortalOpen}
+        onClose={() => setIsSuperadminPortalOpen(false)}
+        currentUser={currentUser}
+      />
+
+      {/* Organizer Auth Modal (Mobile + Reference Number + Password + OTP) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         currentUser={currentUser}
-        userProfile={userProfile}
-        onSyncToCloud={handleSyncToCloud}
-        isSyncing={isSyncingToCloud}
+        onUserChange={(user) => setCurrentUser(user)}
+        onOpenSuperadminPortal={() => setIsSuperadminPortalOpen(true)}
       />
     </div>
   );

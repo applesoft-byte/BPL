@@ -20,9 +20,8 @@ import {
   RefreshCw,
   Crown,
 } from 'lucide-react';
-import { Draft, DraftStats, Player, Team } from '../types';
-import { User as FirebaseUser } from 'firebase/auth';
-import { ADMIN_EMAIL } from '../lib/firebaseDb';
+import { Draft, DraftStats, Player, Team, AppUser } from '../types';
+import { authService } from '../lib/authService';
 
 interface DashboardViewProps {
   drafts: Draft[];
@@ -30,10 +29,11 @@ interface DashboardViewProps {
   stats: DraftStats;
   teams: Team[];
   players: Player[];
-  currentUser?: FirebaseUser | null;
+  currentUser?: AppUser | null;
   isCloudConnected?: boolean;
   isSyncing?: boolean;
   onOpenAuthModal?: () => void;
+  onOpenSuperadminPortal?: () => void;
   onSyncToCloud?: () => Promise<void>;
   onSelectDraft: (draftId: string) => void;
   onCreateNewDraft: () => void;
@@ -58,6 +58,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   isCloudConnected = true,
   isSyncing = false,
   onOpenAuthModal,
+  onOpenSuperadminPortal,
   onSyncToCloud,
   onSelectDraft,
   onCreateNewDraft,
@@ -71,7 +72,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToPlayers,
   onNavigateToTeams,
 }) => {
-  const isAdmin = currentUser?.email === ADMIN_EMAIL;
+  const isSuperadmin =
+    currentUser?.role === 'superadmin' ||
+    authService.isSuperadmin(currentUser?.mobile || '') ||
+    authService.isSuperadmin(currentUser?.email || '');
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Hero Welcome Banner */}
@@ -167,16 +172,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <p className="text-xs text-slate-500">
               {currentUser ? (
                 <span>
-                  Logged in as <strong className="text-slate-700">{currentUser.displayName || currentUser.email}</strong>
-                  {isAdmin && (
+                  Logged in as <strong className="text-slate-700">{currentUser.fullName}</strong> (+88{currentUser.mobile})
+                  {isSuperadmin && (
                     <span className="ml-1.5 inline-flex items-center gap-0.5 text-amber-700 font-extrabold text-[10px]">
-                      <Crown className="w-3 h-3 text-amber-500 inline" /> Admin
+                      <Crown className="w-3 h-3 text-amber-500 inline" /> Superadmin
                     </span>
                   )}
                   {' '}• Draft changes sync across organizers in real-time
                 </span>
               ) : (
-                <span>Local database active. Sign in with Google to enable real-time cloud sync & admin rights.</span>
+                <span>Default roster loaded (Guest View). Sign in with your Mobile & Reference Number to enable real-time cloud editing & sync.</span>
               )}
             </p>
           </div>
@@ -185,6 +190,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex items-center gap-2.5 shrink-0 self-end md:self-auto">
           {currentUser ? (
             <>
+              {isSuperadmin && onOpenSuperadminPortal && (
+                <button
+                  onClick={onOpenSuperadminPortal}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black transition-all shadow-2xs"
+                  title="Open Reference Number management portal"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Reference Portal</span>
+                </button>
+              )}
               {onSyncToCloud && (
                 <button
                   onClick={onSyncToCloud}
@@ -212,8 +227,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 onClick={onOpenAuthModal}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#061A36] to-[#0A5DB8] hover:from-[#082247] hover:to-[#0c6cd6] text-white text-xs font-bold shadow-xs transition-all"
               >
-                <LogIn className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Sign In with Google</span>
+                <LogIn className="w-3.5 h-3.5 text-amber-400" />
+                <span>Sign In / Register</span>
               </button>
             )
           )}
