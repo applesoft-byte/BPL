@@ -124,14 +124,73 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
     return categories.find((c) => c.id === activeCategoryId) || categories[0];
   }, [categories, activeCategoryId]);
 
-  // Eligible Players for active category and pool
+  // Set of all player IDs who are Captains (either by team.captainPlayerId or p.isCaptain)
+  const captainPlayerIds = useMemo(() => {
+    const set = new Set<string>();
+    teams.forEach((t) => {
+      if (t.captainPlayerId) set.add(t.captainPlayerId);
+      if (t.captainName) {
+        const found = players.find(
+          (p) => p.fullName.toLowerCase() === t.captainName?.toLowerCase()
+        );
+        if (found) set.add(found.id);
+      }
+    });
+    players.forEach((p) => {
+      if (p.isCaptain) set.add(p.id);
+    });
+    return set;
+  }, [teams, players]);
+
+  // Which franchise teams have their Captain in the currently active category
+  const teamsWithCaptainInActiveCategory = useMemo(() => {
+    const set = new Set<string>();
+    teams.forEach((t) => {
+      let cap: Player | undefined;
+      if (t.captainPlayerId) {
+        cap = players.find((p) => p.id === t.captainPlayerId);
+      }
+      if (!cap && t.captainName) {
+        cap = players.find((p) => p.fullName.toLowerCase() === t.captainName?.toLowerCase());
+      }
+      if (!cap) {
+        cap = players.find((p) => p.isCaptain && p.assignedTeamId === t.id);
+      }
+      if (cap) {
+        const capCat = cap.primaryCategoryId || cap.assignedCategoryId;
+        if (capCat === activeCategoryId) {
+          set.add(t.id);
+        }
+      }
+    });
+    return set;
+  }, [teams, players, activeCategoryId]);
+
+  // Manual team exclusion state for player spins
+  const [manualExcludedTeamIds, setManualExcludedTeamIds] = useState<string[]>([]);
+
+  const handleToggleTeamExclusion = (teamId: string) => {
+    setManualExcludedTeamIds((prev) =>
+      prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
+    );
+  };
+
+  const handleIncludeAllTeams = () => {
+    setManualExcludedTeamIds([]);
+  };
+
+  // Eligible Players for active category and pool (Captains NEVER appear in lottery draft spins!)
   const eligiblePlayers = useMemo(() => {
     return players.filter((p) => {
+      // Captains are pre-assigned and must not be drafted in lottery spins
+      if (captainPlayerIds.has(p.id) || p.isCaptain) return false;
       if (p.status !== 'available') return false;
       if (p.inDraftPool === false) return false;
 
       if (draft.settings.categoryMode === 'all_mixed') {
         return teams.some((t) => {
+          if (teamsWithCaptainInActiveCategory.has(t.id)) return false;
+          if (manualExcludedTeamIds.includes(t.id)) return false;
           const catQuota = t.quotas[p.primaryCategoryId] || 0;
           const assignedCount = players.filter(
             (pl) =>
@@ -146,12 +205,24 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
 
       return p.primaryCategoryId === activeCategoryId;
     });
-  }, [players, teams, activeCategoryId, draft.settings.categoryMode]);
+  }, [
+    players,
+    teams,
+    activeCategoryId,
+    draft.settings.categoryMode,
+    captainPlayerIds,
+    teamsWithCaptainInActiveCategory,
+    manualExcludedTeamIds,
+  ]);
 
-  // Eligible Teams for active category
+  // Eligible Teams for active category (teams with captain in this category are automatically excluded)
   const eligibleTeams = useMemo(() => {
     return teams.filter((t) => {
       if (!t.active) return false;
+
+      // User mandate: If a captain is in the same category, that team will NOT participate for that spin!
+      if (teamsWithCaptainInActiveCategory.has(t.id)) return false;
+
       const teamPlayers = players.filter((p) => p.assignedTeamId === t.id);
       const maxLimit = t.maxPlayers || 11;
       if (teamPlayers.length >= maxLimit) return false;
@@ -168,14 +239,18 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
 
       return draftedInCat < quota;
     });
-  }, [teams, players, activeCategoryId, draft.settings.categoryMode]);
+  }, [teams, players, activeCategoryId, draft.settings.categoryMode, teamsWithCaptainInActiveCategory]);
 
-  // Category specific pool players
+  // Category specific pool players (strictly excluding captains from the draft lottery)
   const categoryPoolPlayers = useMemo(() => {
     return players.filter(
-      (p) => p.primaryCategoryId === activeCategoryId && p.inDraftPool !== false
+      (p) =>
+        p.primaryCategoryId === activeCategoryId &&
+        p.inDraftPool !== false &&
+        !captainPlayerIds.has(p.id) &&
+        !p.isCaptain
     );
-  }, [players, activeCategoryId]);
+  }, [players, activeCategoryId, captainPlayerIds]);
 
   // Dynamic round players for this category round (available first, then drafted if needed)
   const roundPlayers = useMemo(() => {
@@ -296,12 +371,15 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
     return array[0] % length;
   };
 
-  // Filter valid teams for currently targeted player
+  // Filter valid teams for currently targeted player (excluding captain-category teams and manually excluded teams)
   const validTeamsForHighlightedPlayer = useMemo(() => {
     const targetPlayer = activeSpinPlayer || highlightedPlayer;
-    if (!targetPlayer) return eligibleTeams;
+    // Exclude manually excluded teams from the candidate pool
+    const baseTeams = eligibleTeams.filter((t) => !manualExcludedTeamIds.includes(t.id));
+
+    if (!targetPlayer) return baseTeams;
     if (draft.settings.categoryMode === 'all_mixed') {
-      const filtered = eligibleTeams.filter((t) => {
+      const filtered = baseTeams.filter((t) => {
         const q = t.quotas[targetPlayer.primaryCategoryId] || 0;
         const count = players.filter(
           (p) =>
@@ -311,10 +389,10 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
         ).length;
         return count < q;
       });
-      return filtered.length > 0 ? filtered : eligibleTeams;
+      return filtered;
     }
-    return eligibleTeams;
-  }, [eligibleTeams, activeSpinPlayer, highlightedPlayer, draft.settings.categoryMode, players]);
+    return baseTeams;
+  }, [eligibleTeams, manualExcludedTeamIds, activeSpinPlayer, highlightedPlayer, draft.settings.categoryMode, players]);
 
   // Start the TV broadcast Team Orbit Spin
   const handleStartSpin = () => {
@@ -324,7 +402,7 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
       return;
     }
 
-    if (eligibleTeams.length === 0) {
+    if (validTeamsForHighlightedPlayer.length === 0) {
       return;
     }
 
@@ -361,7 +439,7 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
       !isSpinOverlayOpen &&
       highlightedPlayer &&
       !congratsData &&
-      eligibleTeams.length > 0
+      validTeamsForHighlightedPlayer.length > 0
     ) {
       autoPickTimerRef.current = setTimeout(() => {
         handleStartSpin();
@@ -376,7 +454,7 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
     isSpinOverlayOpen,
     highlightedPlayer,
     congratsData,
-    eligibleTeams.length,
+    validTeamsForHighlightedPlayer.length,
   ]);
 
   // If congrats dialog is open during auto-pick, auto dismiss after 2.5s to keep the draft flowing smoothly
@@ -522,10 +600,15 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
         onToggleAutoPick={setAutoPickEnabled}
         spinningTargetTeamIndex={spinningTargetTeamIndex}
         winningTeam={winningTeam}
-        canSpin={!isAllAllocationsComplete && !!highlightedPlayer && eligibleTeams.length > 0}
+        canSpin={!isAllAllocationsComplete && !!highlightedPlayer && validTeamsForHighlightedPlayer.length > 0}
         wheelSlotsCount={wheelSlotsCount}
         onChangeWheelSlotsCount={setWheelSlotsCount}
         tournamentLogo={draft.logoUrl}
+        excludedTeamIds={manualExcludedTeamIds}
+        teamsWithCaptainInCategory={teamsWithCaptainInActiveCategory}
+        onToggleTeamExclusion={handleToggleTeamExclusion}
+        onIncludeAllTeams={handleIncludeAllTeams}
+        validParticipatingTeamsCount={validTeamsForHighlightedPlayer.length}
       />
 
       {/* 3. BOTTOM SECTION: TAB SWITCHER BETWEEN DRAFT POOL ON DECK & SQUADS MATRIX */}
@@ -907,6 +990,8 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
         teams={teams}
         activeCategory={currentCategory}
         eligibleTeams={validTeamsForHighlightedPlayer}
+        teamsWithCaptainInCategory={teamsWithCaptainInActiveCategory}
+        excludedTeamIds={manualExcludedTeamIds}
         onConfirmPick={handleConfirmSpinPick}
         onClose={handleCloseSpinOverlay}
         autoPickEnabled={autoPickEnabled}

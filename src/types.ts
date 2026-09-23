@@ -13,7 +13,8 @@ export type PlayerBadge =
   | 'ECONOMIST'
   | 'GAME CHANGER'
   | 'SAFE HANDS'
-  | 'LEADER';
+  | 'LEADER'
+  | 'CAPTAIN';
 
 export interface Player {
   id: string;

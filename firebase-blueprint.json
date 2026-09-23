@@ -1,0 +1,441 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for authenticated organizers, coaches, and administrators.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth user UID",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User full display name",
+          "maxLength": 128
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar image URL",
+          "maxLength": 2048
+        },
+        "role": {
+          "type": "string",
+          "description": "User authorization role",
+          "enum": ["admin", "organizer", "viewer"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account registration timestamp"
+        }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Designated administrator identity record granting administrative privileges.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID for the administrator",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "Verified administrator email address",
+          "maxLength": 256
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when admin status was created"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Draft": {
+      "title": "Draft",
+      "description": "A cricket player draft tournament event instance.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the draft",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "League or tournament name",
+          "maxLength": 128
+        },
+        "season": {
+          "type": "string",
+          "description": "Tournament edition or season identifier",
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "description": "Current lifecycle status of the draft event",
+          "enum": ["setup", "ready", "live", "paused", "completed"]
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "Tournament emblem logo URL",
+          "maxLength": 2048
+        },
+        "draftDate": {
+          "type": "string",
+          "description": "Formatted date of the draft event",
+          "maxLength": 64
+        },
+        "organizerName": {
+          "type": "string",
+          "description": "Name of the tournament organizer",
+          "maxLength": 128
+        },
+        "organizerRole": {
+          "type": "string",
+          "description": "Organizer role or title",
+          "maxLength": 64
+        },
+        "slogan": {
+          "type": "string",
+          "description": "Primary league motto",
+          "maxLength": 128
+        },
+        "subSlogan": {
+          "type": "string",
+          "description": "Secondary league slogan",
+          "maxLength": 128
+        },
+        "defaultPlayerQuota": {
+          "type": "number",
+          "description": "Default maximum roster size per team"
+        },
+        "currentCategoryId": {
+          "type": "string",
+          "description": "ID of category currently active in the draft",
+          "maxLength": 128
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the tournament creator",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation epoch millisecond timestamp"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last update epoch millisecond timestamp"
+        }
+      },
+      "required": ["id", "name", "season", "status", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Team": {
+      "title": "Team",
+      "description": "A participating franchise cricket team.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique team ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "draftId": {
+          "type": "string",
+          "description": "Associated draft tournament ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full franchise team name",
+          "maxLength": 128
+        },
+        "shortName": {
+          "type": "string",
+          "description": "Abbreviated team code",
+          "maxLength": 16
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "Team crest logo URL",
+          "maxLength": 2048
+        },
+        "primaryColor": {
+          "type": "string",
+          "description": "Primary team brand hex color",
+          "maxLength": 32
+        },
+        "secondaryColor": {
+          "type": "string",
+          "description": "Secondary brand hex color",
+          "maxLength": 32
+        },
+        "maxPlayers": {
+          "type": "number",
+          "description": "Maximum squad limit"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether team participates in active draft"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the draft creator",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["id", "draftId", "name", "shortName", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Player": {
+      "title": "Player",
+      "description": "A cricket player eligible for selection in the draft.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique player ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "draftId": {
+          "type": "string",
+          "description": "Associated draft tournament ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Player full name",
+          "maxLength": 128
+        },
+        "jerseyNumber": {
+          "type": "string",
+          "description": "Player jersey shirt number",
+          "maxLength": 16
+        },
+        "primaryCategoryId": {
+          "type": "string",
+          "description": "Primary draft category ID",
+          "maxLength": 128
+        },
+        "playerType": {
+          "type": "string",
+          "description": "Cricket specialization role",
+          "maxLength": 64
+        },
+        "battingStyle": {
+          "type": "string",
+          "description": "Batting hand stance",
+          "maxLength": 32
+        },
+        "bowlingStyle": {
+          "type": "string",
+          "description": "Bowling delivery style",
+          "maxLength": 64
+        },
+        "badge": {
+          "type": "string",
+          "description": "Distinctive skill badge title",
+          "maxLength": 64
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Player profile photograph URL",
+          "maxLength": 2048
+        },
+        "inDraftPool": {
+          "type": "boolean",
+          "description": "Flag indicating if player is enrolled in lottery pool"
+        },
+        "status": {
+          "type": "string",
+          "description": "Selection status",
+          "enum": ["available", "drafted", "inactive"]
+        },
+        "assignedTeamId": {
+          "type": "string",
+          "description": "Winning drafted team ID if selected",
+          "maxLength": 128
+        },
+        "assignedCategoryId": {
+          "type": "string",
+          "description": "Category under which player was picked",
+          "maxLength": 128
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the draft creator",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "draftId", "fullName", "primaryCategoryId", "status", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "A draft tier category grouping players by skill or bidding round.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Category identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "draftId": {
+          "type": "string",
+          "description": "Associated draft tournament ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Category name (e.g., Diamond, Gold, Silver)",
+          "maxLength": 64
+        },
+        "color": {
+          "type": "string",
+          "description": "Badge theme color hex",
+          "maxLength": 32
+        },
+        "iconName": {
+          "type": "string",
+          "description": "Icon descriptor",
+          "maxLength": 64
+        },
+        "order": {
+          "type": "number",
+          "description": "Sequential draft order sequence"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Category activation status"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the draft creator",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "number": "number",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "draftId", "name", "order", "ownerId", "createdAt", "updatedAt"]
+    },
+    "PickRecord": {
+      "title": "PickRecord",
+      "description": "Immutable log entry representing an official player selection.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique pick identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "draftId": {
+          "type": "string",
+          "description": "Associated draft tournament ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "sequence": {
+          "type": "number",
+          "description": "Sequential pick ordinal number in the draft event"
+        },
+        "playerId": {
+          "type": "string",
+          "description": "Selected player ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teamId": {
+          "type": "string",
+          "description": "Franchise team ID drafting the player",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Category under which pick occurred",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the draft creator",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp when player was officially selected"
+        }
+      },
+      "required": ["id", "draftId", "sequence", "playerId", "teamId", "categoryId", "ownerId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection with individual user records."
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Designated administrator lookup records for RBAC authorization."
+    },
+    "/drafts/{draftId}": {
+      "schema": "Draft",
+      "description": "Cricket player draft tournament documents."
+    },
+    "/teams/{teamId}": {
+      "schema": "Team",
+      "description": "Franchise cricket teams participating across drafts."
+    },
+    "/players/{playerId}": {
+      "schema": "Player",
+      "description": "Cricket players registered for draft selection."
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Draft tiers and player skill categories."
+    },
+    "/picks/{pickId}": {
+      "schema": "PickRecord",
+      "description": "Certified immutable draft pick transaction history."
+    }
+  }
+}

@@ -24,6 +24,8 @@ interface TeamOrbitSpinOverlayProps {
   teams: Team[];
   activeCategory: Category;
   eligibleTeams: Team[];
+  teamsWithCaptainInCategory?: Set<string>;
+  excludedTeamIds?: string[];
   onConfirmPick: (player: Player, team: Team) => Promise<void>;
   onClose: () => void;
   autoPickEnabled: boolean;
@@ -38,6 +40,8 @@ export const TeamOrbitSpinOverlay: React.FC<TeamOrbitSpinOverlayProps> = ({
   teams,
   activeCategory,
   eligibleTeams,
+  teamsWithCaptainInCategory = new Set(),
+  excludedTeamIds = [],
   onConfirmPick,
   onClose,
   autoPickEnabled,
@@ -463,11 +467,21 @@ export const TeamOrbitSpinOverlay: React.FC<TeamOrbitSpinOverlayProps> = ({
                       </span>
                     )}
 
-                    {/* Ineligible Lock Badge */}
+                    {/* Ineligible Lock / Captain / Excluded Badge */}
                     {!isEligible && !isWinner && (
-                      <span className="absolute -top-1.5 -right-1 px-1 py-0.2 rounded-full bg-slate-900 text-slate-400 border border-slate-700 text-[6.5px] font-black z-20 flex items-center gap-0.5">
-                        <Lock className="w-2 h-2" /> FULL
-                      </span>
+                      teamsWithCaptainInCategory.has(team.id) ? (
+                        <span className="absolute -top-1.5 -right-1 px-1 py-0.2 rounded-full bg-amber-950 text-amber-300 border border-amber-600 text-[6.5px] font-black z-20 flex items-center gap-0.5">
+                          <Crown className="w-2 h-2 text-amber-400" /> CAPT
+                        </span>
+                      ) : excludedTeamIds.includes(team.id) ? (
+                        <span className="absolute -top-1.5 -right-1 px-1 py-0.2 rounded-full bg-rose-950 text-rose-300 border border-rose-600 text-[6.5px] font-black z-20 flex items-center gap-0.5">
+                          ✕ EXCL
+                        </span>
+                      ) : (
+                        <span className="absolute -top-1.5 -right-1 px-1 py-0.2 rounded-full bg-slate-900 text-slate-400 border border-slate-700 text-[6.5px] font-black z-20 flex items-center gap-0.5">
+                          <Lock className="w-2 h-2" /> FULL
+                        </span>
+                      )
                     )}
 
                     {/* Team Logo */}

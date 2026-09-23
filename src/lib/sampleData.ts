@@ -647,12 +647,19 @@ export function createSampleDraftData(): {
 
   const players: Player[] = officialPlayersRaw.map((raw, idx) => {
     const jerseyStr = String(idx + 1).padStart(2, '0');
+    const playerId = `player-${idx + 1}`;
     const catObj = categories.find((c) => c.id === raw.cat);
     const catName = catObj ? catObj.name : 'All-Rounder';
     const photo = raw.driveId ? gDriveImg(raw.driveId) : generateCricketAvatar(raw.fullName, jerseyStr, idx + 1);
 
+    // Check if player is a pre-selected captain of any franchise team
+    const teamWithCaptain = teams.find(
+      (t) => t.captainPlayerId === playerId || (t.captainName && t.captainName.toLowerCase() === raw.fullName.toLowerCase())
+    );
+    const isCaptain = !!teamWithCaptain;
+
     return {
-      id: `player-${idx + 1}`,
+      id: playerId,
       draftId,
       fullName: raw.fullName,
       jerseyNumber: jerseyStr,
@@ -660,12 +667,15 @@ export function createSampleDraftData(): {
       playerType: `${raw.bat} • ${raw.bowl}`,
       battingStyle: raw.bat,
       bowlingStyle: raw.bowl,
-      badge: raw.badge,
+      badge: isCaptain ? 'CAPTAIN' : raw.badge,
       photoUrl: photo,
       inDraftPool: true,
       contactEmail: raw.email,
       notes: `Contact: ${raw.contact} | Original Team: ${raw.currentTeam}`,
-      status: 'available',
+      status: isCaptain ? 'drafted' : 'available',
+      isCaptain,
+      assignedTeamId: teamWithCaptain ? teamWithCaptain.id : undefined,
+      assignedCategoryId: isCaptain ? raw.cat : undefined,
       createdAt: now,
       updatedAt: now,
     };

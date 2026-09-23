@@ -31,6 +31,11 @@ interface StadiumLotteryArenaProps {
   wheelSlotsCount?: number | 'auto';
   onChangeWheelSlotsCount?: (count: number | 'auto') => void;
   tournamentLogo?: string;
+  excludedTeamIds?: string[];
+  teamsWithCaptainInCategory?: Set<string>;
+  onToggleTeamExclusion?: (teamId: string) => void;
+  onIncludeAllTeams?: () => void;
+  validParticipatingTeamsCount?: number;
 }
 
 export const StadiumLotteryArena: React.FC<StadiumLotteryArenaProps> = ({
@@ -51,6 +56,11 @@ export const StadiumLotteryArena: React.FC<StadiumLotteryArenaProps> = ({
   wheelSlotsCount = 'auto',
   onChangeWheelSlotsCount,
   tournamentLogo,
+  excludedTeamIds = [],
+  teamsWithCaptainInCategory = new Set(),
+  onToggleTeamExclusion,
+  onIncludeAllTeams,
+  validParticipatingTeamsCount,
 }) => {
   // Dynamically divide all tournament teams between Left and Right flanks
   const { leftTeams, rightTeams, totalTeams, halfCount } = useMemo(() => {
@@ -101,6 +111,9 @@ export const StadiumLotteryArena: React.FC<StadiumLotteryArenaProps> = ({
                 activeCategory={activeCategory}
                 isTargeted={spinningTargetTeamIndex === idx}
                 isWinner={winningTeam?.id === team.id}
+                isExcluded={excludedTeamIds.includes(team.id)}
+                isCaptainInCategory={teamsWithCaptainInCategory.has(team.id)}
+                onToggleExclude={() => onToggleTeamExclusion?.(team.id)}
                 arrow="right"
               />
             ))}
@@ -173,6 +186,107 @@ export const StadiumLotteryArena: React.FC<StadiumLotteryArenaProps> = ({
                   </span>
                 </div>
               )}
+
+              {/* Spin Team Participation & Manual Exclusion Bar */}
+              <div className="w-full bg-white/90 backdrop-blur-xs rounded-xl border border-blue-200/70 p-1.5 shadow-2xs mt-0.5">
+                <div className="flex items-center justify-between gap-1 text-[8.5px] font-bold text-[#061A36] mb-1 px-0.5">
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3 h-3 text-[#1283E6]" />
+                    <span>Next Spin Teams:</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-blue-100 text-[#0A5DB8] font-black">
+                      {validParticipatingTeamsCount ?? (teams.length - excludedTeamIds.length - teamsWithCaptainInCategory.size)} in spin
+                    </span>
+                  </div>
+                  {excludedTeamIds.length > 0 && onIncludeAllTeams && (
+                    <button
+                      type="button"
+                      onClick={onIncludeAllTeams}
+                      disabled={isSpinning}
+                      className="text-[#1283E6] hover:underline cursor-pointer font-extrabold"
+                    >
+                      Reset Excluded ({excludedTeamIds.length})
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1">
+                  {teams.map((t) => {
+                    const isCapt = teamsWithCaptainInCategory.has(t.id);
+                    const isExcl = excludedTeamIds.includes(t.id);
+                    const tPlayers = players.filter((p) => p.assignedTeamId === t.id);
+                    const catQuota = t.quotas[activeCategory.id] ?? 1;
+                    const catDrafted = tPlayers.filter(
+                      (p) => p.primaryCategoryId === activeCategory.id || p.assignedCategoryId === activeCategory.id
+                    ).length;
+                    const isQuotaFull = catDrafted >= catQuota && catQuota > 0;
+                    const isMax = tPlayers.length >= (t.maxPlayers || 7);
+
+                    if (isCapt) {
+                      return (
+                        <span
+                          key={t.id}
+                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-300 text-[8px] font-extrabold shadow-2xs cursor-help"
+                          title="Captain is in this active category. Auto-excluded from spin as per tournament rules."
+                        >
+                          <Crown className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+                          <span className="truncate max-w-[70px]">{t.shortName || t.name}</span>
+                          <span className="text-[7px] text-amber-700 bg-amber-100 px-0.5 py-0.1 rounded font-black">Capt</span>
+                        </span>
+                      );
+                    }
+
+                    if (isQuotaFull || isMax) {
+                      return (
+                        <span
+                          key={t.id}
+                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-300 text-[8px] font-bold opacity-60"
+                          title="Team quota complete for this category / max roster reached."
+                        >
+                          <Lock className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[70px]">{t.shortName || t.name}</span>
+                          <span className="text-[7px] bg-slate-200 px-0.5 py-0.1 rounded font-black">Full</span>
+                        </span>
+                      );
+                    }
+
+                    if (isExcl) {
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => !isSpinning && onToggleTeamExclusion?.(t.id)}
+                          disabled={isSpinning}
+                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 text-[8px] font-extrabold transition-all shadow-2xs cursor-pointer active:scale-95"
+                          title="Click to INCLUDE this team back in spin"
+                        >
+                          <span className="text-rose-500 font-black text-[8.5px]">✕</span>
+                          <span className="truncate max-w-[70px]">{t.shortName || t.name}</span>
+                          <span className="text-[7px] bg-rose-200/80 text-rose-800 px-0.5 py-0.1 rounded font-black">Excl</span>
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => !isSpinning && onToggleTeamExclusion?.(t.id)}
+                        disabled={isSpinning}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 hover:bg-rose-50 text-emerald-800 hover:text-rose-700 border border-emerald-300 hover:border-rose-300 text-[8px] font-extrabold transition-all shadow-2xs cursor-pointer active:scale-95 group"
+                        title="Click to EXCLUDE this team from next spin"
+                      >
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 group-hover:hidden shrink-0" />
+                        <span className="hidden group-hover:inline text-rose-500 font-black text-[8px]">✕</span>
+                        <span className="truncate max-w-[70px]">{t.shortName || t.name}</span>
+                        <span className="text-[7px] bg-emerald-200/80 group-hover:bg-rose-200/80 px-0.5 py-0.1 rounded font-black">
+                          <span className="group-hover:hidden">In</span>
+                          <span className="hidden group-hover:inline">Excl</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -193,6 +307,9 @@ export const StadiumLotteryArena: React.FC<StadiumLotteryArenaProps> = ({
                 activeCategory={activeCategory}
                 isTargeted={spinningTargetTeamIndex === halfCount + idx}
                 isWinner={winningTeam?.id === team.id}
+                isExcluded={excludedTeamIds.includes(team.id)}
+                isCaptainInCategory={teamsWithCaptainInCategory.has(team.id)}
+                onToggleExclude={() => onToggleTeamExclusion?.(team.id)}
                 arrow="left"
               />
             ))}
@@ -268,6 +385,106 @@ export const StadiumLotteryArena: React.FC<StadiumLotteryArenaProps> = ({
                 })}
               </div>
             )}
+
+            {/* Spin Team Participation & Manual Exclusion Bar (Mobile) */}
+            <div className="w-full bg-white/90 backdrop-blur-xs rounded-xl border border-blue-200/70 p-1.5 shadow-2xs mt-0.5">
+              <div className="flex items-center justify-between gap-1 text-[8.5px] font-bold text-[#061A36] mb-1 px-0.5">
+                <div className="flex items-center gap-1">
+                  <Users className="w-3 h-3 text-[#1283E6]" />
+                  <span>Next Spin Teams:</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-blue-100 text-[#0A5DB8] font-black">
+                    {validParticipatingTeamsCount ?? (teams.length - excludedTeamIds.length - teamsWithCaptainInCategory.size)} in spin
+                  </span>
+                </div>
+                {excludedTeamIds.length > 0 && onIncludeAllTeams && (
+                  <button
+                    type="button"
+                    onClick={onIncludeAllTeams}
+                    disabled={isSpinning}
+                    className="text-[#1283E6] hover:underline cursor-pointer font-extrabold"
+                  >
+                    Reset Excluded ({excludedTeamIds.length})
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1">
+                {teams.map((t) => {
+                  const isCapt = teamsWithCaptainInCategory.has(t.id);
+                  const isExcl = excludedTeamIds.includes(t.id);
+                  const tPlayers = players.filter((p) => p.assignedTeamId === t.id);
+                  const catQuota = t.quotas[activeCategory.id] ?? 1;
+                  const catDrafted = tPlayers.filter(
+                    (p) => p.primaryCategoryId === activeCategory.id || p.assignedCategoryId === activeCategory.id
+                  ).length;
+                  const isQuotaFull = catDrafted >= catQuota && catQuota > 0;
+                  const isMax = tPlayers.length >= (t.maxPlayers || 7);
+
+                  if (isCapt) {
+                    return (
+                      <span
+                        key={t.id}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-300 text-[8px] font-extrabold shadow-2xs"
+                        title="Captain is in this category"
+                      >
+                        <Crown className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+                        <span className="truncate max-w-[70px]">{t.shortName || t.name}</span>
+                        <span className="text-[7px] text-amber-700 bg-amber-100 px-0.5 py-0.1 rounded font-black">Capt</span>
+                      </span>
+                    );
+                  }
+
+                  if (isQuotaFull || isMax) {
+                    return (
+                      <span
+                        key={t.id}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-300 text-[8px] font-bold opacity-60"
+                      >
+                        <Lock className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                        <span className="truncate max-w-[70px]">{t.shortName || t.name}</span>
+                        <span className="text-[7px] bg-slate-200 px-0.5 py-0.1 rounded font-black">Full</span>
+                      </span>
+                    );
+                  }
+
+                  if (isExcl) {
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => !isSpinning && onToggleTeamExclusion?.(t.id)}
+                        disabled={isSpinning}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 text-[8px] font-extrabold transition-all shadow-2xs cursor-pointer"
+                        title="Click to Include team in spin"
+                      >
+                        <span className="text-rose-500 font-black text-[8.5px]">✕</span>
+                        <span className="truncate max-w-[70px]">{t.shortName || t.name}</span>
+                        <span className="text-[7px] bg-rose-200/80 text-rose-800 px-0.5 py-0.1 rounded font-black">Excl</span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => !isSpinning && onToggleTeamExclusion?.(t.id)}
+                      disabled={isSpinning}
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 hover:bg-rose-50 text-emerald-800 hover:text-rose-700 border border-emerald-300 hover:border-rose-300 text-[8px] font-extrabold transition-all shadow-2xs cursor-pointer group"
+                      title="Click to Exclude team from next spin"
+                    >
+                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 group-hover:hidden shrink-0" />
+                      <span className="hidden group-hover:inline text-rose-500 font-black text-[8px]">✕</span>
+                      <span className="truncate max-w-[70px]">{t.shortName || t.name}</span>
+                      <span className="text-[7px] bg-emerald-200/80 group-hover:bg-rose-200/80 px-0.5 py-0.1 rounded font-black">
+                        <span className="group-hover:hidden">In</span>
+                        <span className="hidden group-hover:inline">Excl</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Dynamic All-Teams Grid (Adapts to 2, 4, 6, 8, 10, 12 teams) */}
@@ -281,6 +498,9 @@ export const StadiumLotteryArena: React.FC<StadiumLotteryArenaProps> = ({
                 activeCategory={activeCategory}
                 isTargeted={spinningTargetTeamIndex === idx}
                 isWinner={winningTeam?.id === team.id}
+                isExcluded={excludedTeamIds.includes(team.id)}
+                isCaptainInCategory={teamsWithCaptainInCategory.has(team.id)}
+                onToggleExclude={() => onToggleTeamExclusion?.(team.id)}
                 isGridItem
               />
             ))}
@@ -529,6 +749,9 @@ interface PerimeterTeamCardProps {
   isWinner: boolean;
   arrow?: 'left' | 'right';
   isGridItem?: boolean;
+  isExcluded?: boolean;
+  isCaptainInCategory?: boolean;
+  onToggleExclude?: () => void;
 }
 
 const PerimeterTeamCard: React.FC<PerimeterTeamCardProps> = ({
@@ -540,6 +763,9 @@ const PerimeterTeamCard: React.FC<PerimeterTeamCardProps> = ({
   isWinner,
   arrow,
   isGridItem = false,
+  isExcluded = false,
+  isCaptainInCategory = false,
+  onToggleExclude,
 }) => {
   // Sort team players so the LAST player drafted will be listed in the FIRST place!
   const teamPlayers = useMemo(() => {
@@ -564,8 +790,8 @@ const PerimeterTeamCard: React.FC<PerimeterTeamCardProps> = ({
   const isMaxCapReached = teamPlayers.length >= maxCap;
 
   // "Je ekbar player pabe sei team grayed out hobe"
-  // Once a team gets its player in this round / category (or max cap reached), gray it out!
-  const isGrayedOut = !isWinner && (isCategoryLocked || isMaxCapReached);
+  // Once a team gets its player in this round / category (or max cap reached), or if captain is in category, or if manually excluded, gray it out!
+  const isGrayedOut = !isWinner && (isCategoryLocked || isMaxCapReached || isCaptainInCategory || isExcluded);
 
   // Auto-scroll list to top when a new player is drafted so newest is immediately in view
   const rosterScrollRef = useRef<HTMLDivElement | null>(null);
@@ -608,7 +834,7 @@ const PerimeterTeamCard: React.FC<PerimeterTeamCardProps> = ({
             : isTargeted
             ? 'scale-101 ring-2 ring-blue-400 bg-blue-50/90 shadow-sm shadow-blue-400/20'
             : isGrayedOut
-            ? 'bg-slate-100/85 border-slate-300/80 opacity-55 grayscale-[65%] contrast-90 hover:opacity-85'
+            ? 'bg-slate-100/85 border-slate-300/80 opacity-60 grayscale-[60%] contrast-90 hover:opacity-90'
             : 'bg-white/95 hover:shadow-xs'
         }`}
         style={{ borderColor: isGrayedOut ? '#cbd5e1' : team.primaryColor || '#1283E6' }}
@@ -639,17 +865,52 @@ const PerimeterTeamCard: React.FC<PerimeterTeamCardProps> = ({
             )}
           </div>
 
-          {/* Name & Captain */}
+          {/* Name & Status */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-1">
               <h4 className="font-extrabold text-[10.5px] xl:text-[11px] text-[#061A36] leading-tight truncate">
                 {team.name}
               </h4>
-              {isGrayedOut && (
-                <span className="shrink-0 px-1 py-0.2 rounded bg-slate-200 text-slate-600 text-[6.5px] font-black uppercase tracking-wider">
-                  ✓ DRAFTED
-                </span>
-              )}
+              <div className="flex items-center gap-1 shrink-0">
+                {isCaptainInCategory ? (
+                  <span
+                    className="px-1 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 text-[6.5px] font-black uppercase tracking-wider flex items-center gap-0.5 cursor-help"
+                    title="Captain is in this active category, team does not participate in spin"
+                  >
+                    <Crown className="w-1.5 h-1.5 text-amber-600" /> CAPT
+                  </span>
+                ) : isExcluded ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleExclude?.();
+                    }}
+                    className="px-1 py-0.2 rounded bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-300 text-[6.5px] font-black uppercase tracking-wider cursor-pointer"
+                    title="Click to INCLUDE in spin"
+                  >
+                    ✕ EXCL
+                  </button>
+                ) : isCategoryLocked || isMaxCapReached ? (
+                  <span className="px-1 py-0.2 rounded bg-slate-200 text-slate-600 text-[6.5px] font-black uppercase tracking-wider">
+                    ✓ FULL
+                  </span>
+                ) : (
+                  onToggleExclude && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleExclude();
+                      }}
+                      className="px-1 py-0.2 rounded bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-300 text-[6px] font-bold uppercase transition-colors cursor-pointer"
+                      title="Exclude from next spin"
+                    >
+                      Excl
+                    </button>
+                  )
+                )}
+              </div>
             </div>
             {team.captainName ? (
               <div className="flex items-center gap-0.5 text-[8px] font-bold text-amber-700 truncate">
