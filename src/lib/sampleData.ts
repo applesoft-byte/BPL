@@ -1,4 +1,4 @@
-import { Category, Draft, Player, PlayerBadge, Team } from '../types';
+import { Category, Draft, PickRecord, Player, PlayerBadge, Team } from '../types';
 import {
   DEFAULT_BPL_LOGO,
   TEAM_DEFAULT_LOGOS,
@@ -10,6 +10,7 @@ export function createSampleDraftData(): {
   categories: Category[];
   teams: Team[];
   players: Player[];
+  picks: PickRecord[];
 } {
   const draftId = 'bpl-s2-main';
   const now = Date.now();
@@ -142,19 +143,35 @@ export function createSampleDraftData(): {
     'cat-mini-all': 1,
   };
 
-  // The 6 Official Franchise Teams for BPL Season-2
+  // The 6 Official Franchise Teams for BPL Season-2 (Matching Official Draft Graphic)
   const teams: Team[] = [
+    {
+      id: 'team-abd-sports',
+      draftId,
+      name: 'ABD SPORTS BROTHERS',
+      shortName: 'ASB',
+      logoUrl: TEAM_DEFAULT_LOGOS['team-abd-sports'],
+      primaryColor: '#0284C7',
+      secondaryColor: '#E0F2FE',
+      maxPlayers: 10,
+      captainPlayerId: 'player-1',
+      captainName: 'Abdullah Akash',
+      quotas: { ...default6Quotas },
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
     {
       id: 'team-warriors',
       draftId,
-      name: 'Brothers Warriors',
+      name: 'BROTHERS WARRIORS',
       shortName: 'BW',
       logoUrl: TEAM_DEFAULT_LOGOS['team-warriors'],
-      primaryColor: '#16A34A',
-      secondaryColor: '#DCFCE7',
-      maxPlayers: 11,
-      captainPlayerId: 'player-asif',
-      captainName: 'Asif',
+      primaryColor: '#DC2626',
+      secondaryColor: '#FEE2E2',
+      maxPlayers: 10,
+      captainPlayerId: 'player-32',
+      captainName: 'Shafiqul Islam',
       quotas: { ...default6Quotas },
       active: true,
       createdAt: now,
@@ -163,72 +180,62 @@ export function createSampleDraftData(): {
     {
       id: 'team-prime',
       draftId,
-      name: 'Prime Brothers Cricket XI',
-      shortName: 'PBCXI',
+      name: 'PRIME BROTHERS',
+      shortName: 'PB',
       logoUrl: TEAM_DEFAULT_LOGOS['team-prime'],
-      primaryColor: '#EA580C',
-      secondaryColor: '#FFEDD5',
-      maxPlayers: 11,
-      captainPlayerId: 'player-shahin',
-      captainName: 'Kazi Shahin',
+      primaryColor: '#D97706',
+      secondaryColor: '#FEF3C7',
+      maxPlayers: 10,
+      captainPlayerId: 'player-20',
+      captainName: 'Alauddin',
       quotas: { ...default6Quotas },
       active: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      id: 'team-kings',
+      id: 'team-fearless',
       draftId,
-      name: 'The Crown Kings',
-      shortName: 'TCK',
-      logoUrl: TEAM_DEFAULT_LOGOS['team-kings'],
-      primaryColor: '#EAB308',
-      secondaryColor: '#FEF08A',
-      maxPlayers: 11,
-      captainPlayerId: 'player-mostafiz',
-      captainName: 'Md. Mostafizur Rahman',
+      name: 'FEARLESS BROTHERS',
+      shortName: 'FB',
+      logoUrl: TEAM_DEFAULT_LOGOS['team-fearless'],
+      primaryColor: '#7C3AED',
+      secondaryColor: '#EDE9FE',
+      maxPlayers: 10,
+      captainPlayerId: 'player-8',
+      captainName: 'Sakhawat Hossain',
       quotas: { ...default6Quotas },
       active: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      id: 'team-titans',
+      id: 'team-mighty',
       draftId,
-      name: 'Brothers Titans',
-      shortName: 'BT',
-      logoUrl: TEAM_DEFAULT_LOGOS['team-titans'],
-      primaryColor: '#2563EB',
-      secondaryColor: '#DBEAFE',
-      maxPlayers: 11,
+      name: 'MIGHTY BROTHERS',
+      shortName: 'MB',
+      logoUrl: TEAM_DEFAULT_LOGOS['team-mighty'],
+      primaryColor: '#0891B2',
+      secondaryColor: '#CFFAFE',
+      maxPlayers: 10,
+      captainPlayerId: 'player-31',
+      captainName: 'AR Mukul',
       quotas: { ...default6Quotas },
       active: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      id: 'team-strikers',
+      id: 'team-amra-amroi',
       draftId,
-      name: 'Brothers Strikers',
-      shortName: 'BS',
-      logoUrl: TEAM_DEFAULT_LOGOS['team-strikers'],
-      primaryColor: '#DC2626',
-      secondaryColor: '#FEE2E2',
-      maxPlayers: 11,
-      quotas: { ...default6Quotas },
-      active: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'team-challengers',
-      draftId,
-      name: 'Brothers Challengers',
-      shortName: 'BC',
-      logoUrl: TEAM_DEFAULT_LOGOS['team-challengers'],
-      primaryColor: '#0D9488',
-      secondaryColor: '#CCFBF1',
-      maxPlayers: 11,
+      name: 'AMRA AMROI BROTHERS ELEVEN',
+      shortName: 'AABE',
+      logoUrl: TEAM_DEFAULT_LOGOS['team-amra-amroi'],
+      primaryColor: '#16A34A',
+      secondaryColor: '#DCFCE7',
+      maxPlayers: 10,
+      captainPlayerId: 'player-17',
+      captainName: 'Arif Khan',
       quotas: { ...default6Quotas },
       active: true,
       createdAt: now,
@@ -448,8 +455,8 @@ export function createSampleDraftData(): {
       badge: 'CLASSIC',
     },
     {
-      fullName: 'Zahid',
-      bengaliName: 'জাহিদ',
+      fullName: 'Nazim (Zahid)',
+      bengaliName: 'নাজিম (জাহিদ)',
       cat: 'cat-bat-lvl-3',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -940,18 +947,108 @@ export function createSampleDraftData(): {
     },
   ];
 
+  // 60 Official Picks reflecting the BPL Season-2 Draft Graphic & Final Roster
+  const season2PicksOrder: Array<{
+    seq: number;
+    fullName: string;
+    teamId: string;
+    catId: string;
+    isCaptain?: boolean;
+    isWk?: boolean;
+  }> = [
+    // --- Round 1: Batsman Level-01 ---
+    { seq: 1, fullName: 'Abdullah Akash', teamId: 'team-abd-sports', catId: 'cat-bat-lvl-1', isCaptain: true, isWk: true },
+    { seq: 2, fullName: 'Mohammad Emon', teamId: 'team-warriors', catId: 'cat-bat-lvl-1' },
+    { seq: 3, fullName: 'Jahangir', teamId: 'team-prime', catId: 'cat-bat-lvl-1' },
+    { seq: 4, fullName: 'MD. Saidul Islam Polash', teamId: 'team-fearless', catId: 'cat-bat-lvl-1', isWk: true },
+    { seq: 5, fullName: 'Rayhan Emon', teamId: 'team-mighty', catId: 'cat-bat-lvl-1', isWk: true },
+    { seq: 6, fullName: 'Mohon', teamId: 'team-amra-amroi', catId: 'cat-bat-lvl-1', isWk: true },
+
+    // --- Round 2: Batsman Level-02 ---
+    { seq: 7, fullName: 'MD NAIEEM KHAN RONI', teamId: 'team-abd-sports', catId: 'cat-bat-lvl-2' },
+    { seq: 8, fullName: 'Saiful Islam Antor', teamId: 'team-warriors', catId: 'cat-bat-lvl-2' },
+    { seq: 9, fullName: 'Omar Hossain', teamId: 'team-prime', catId: 'cat-bat-lvl-2' },
+    { seq: 10, fullName: 'Sakhawat Hossain', teamId: 'team-fearless', catId: 'cat-bat-lvl-2', isCaptain: true },
+    { seq: 11, fullName: 'Abran', teamId: 'team-mighty', catId: 'cat-bat-lvl-2' },
+    { seq: 12, fullName: 'Shuvo', teamId: 'team-amra-amroi', catId: 'cat-bat-lvl-2' },
+
+    // --- Round 3: Batsman Level-03 ---
+    { seq: 13, fullName: 'Nazim (Zahid)', teamId: 'team-abd-sports', catId: 'cat-bat-lvl-3' },
+    { seq: 14, fullName: 'Rana Khan', teamId: 'team-warriors', catId: 'cat-bat-lvl-3' },
+    { seq: 15, fullName: 'Ashraful Shohel', teamId: 'team-prime', catId: 'cat-bat-lvl-3' },
+    { seq: 16, fullName: 'MD Mokka Sarker', teamId: 'team-fearless', catId: 'cat-bat-lvl-3' },
+    { seq: 17, fullName: 'Shuvo Senior', teamId: 'team-mighty', catId: 'cat-bat-lvl-3' },
+    { seq: 18, fullName: 'Arif Khan', teamId: 'team-amra-amroi', catId: 'cat-bat-lvl-3', isCaptain: true },
+
+    // --- Round 4: Batsman Level-04 ---
+    { seq: 19, fullName: 'Rana', teamId: 'team-abd-sports', catId: 'cat-bat-lvl-4' },
+    { seq: 20, fullName: 'Alal', teamId: 'team-warriors', catId: 'cat-bat-lvl-4' },
+    { seq: 21, fullName: 'Alauddin', teamId: 'team-prime', catId: 'cat-bat-lvl-4', isCaptain: true, isWk: true },
+    { seq: 22, fullName: 'Md. Sohanur Rohman', teamId: 'team-fearless', catId: 'cat-bat-lvl-4' },
+    { seq: 23, fullName: 'Shahriar Alom Rafin', teamId: 'team-mighty', catId: 'cat-bat-lvl-4' },
+    { seq: 24, fullName: 'Selim Badsha', teamId: 'team-amra-amroi', catId: 'cat-bat-lvl-4' },
+
+    // --- Round 5: Bowling-Batting Equal ---
+    { seq: 25, fullName: 'RA Apon', teamId: 'team-abd-sports', catId: 'cat-bowl-bat-equal' },
+    { seq: 26, fullName: 'Tanzim', teamId: 'team-warriors', catId: 'cat-bowl-bat-equal' },
+    { seq: 27, fullName: 'Hasan', teamId: 'team-prime', catId: 'cat-bowl-bat-equal' },
+    { seq: 28, fullName: 'Sohrab Ahmed Ayan', teamId: 'team-fearless', catId: 'cat-bowl-bat-equal' },
+    { seq: 29, fullName: 'M. Fahim', teamId: 'team-mighty', catId: 'cat-bowl-bat-equal' },
+    { seq: 30, fullName: 'Khalek', teamId: 'team-amra-amroi', catId: 'cat-bowl-bat-equal' },
+
+    // --- Round 6: Batting All-Rounder ---
+    { seq: 31, fullName: 'Rezvi', teamId: 'team-abd-sports', catId: 'cat-bat-all-round' },
+    { seq: 32, fullName: 'Shafiqul Islam', teamId: 'team-warriors', catId: 'cat-bat-all-round', isCaptain: true },
+    { seq: 33, fullName: 'Mehedi Hasan Mithun', teamId: 'team-prime', catId: 'cat-bat-all-round' },
+    { seq: 34, fullName: 'Zoni Ahmed', teamId: 'team-fearless', catId: 'cat-bat-all-round' },
+    { seq: 35, fullName: 'AR Mukul', teamId: 'team-mighty', catId: 'cat-bat-all-round', isCaptain: true },
+    { seq: 36, fullName: 'Sujan', teamId: 'team-amra-amroi', catId: 'cat-bat-all-round' },
+
+    // --- Round 7: Slow Bowling All-Rounder ---
+    { seq: 37, fullName: 'Abdullah Al Mamun', teamId: 'team-abd-sports', catId: 'cat-slow-bowl-all' },
+    { seq: 38, fullName: 'Shamim Islam', teamId: 'team-warriors', catId: 'cat-slow-bowl-all' },
+    { seq: 39, fullName: 'Sohag', teamId: 'team-prime', catId: 'cat-slow-bowl-all' },
+    { seq: 40, fullName: 'Arif Iquebal', teamId: 'team-fearless', catId: 'cat-slow-bowl-all' },
+    { seq: 41, fullName: 'Khorshed', teamId: 'team-mighty', catId: 'cat-slow-bowl-all' },
+    { seq: 42, fullName: 'Y.A. Jony', teamId: 'team-amra-amroi', catId: 'cat-slow-bowl-all' },
+
+    // --- Round 8: Batting All-Rounder Level-2 ---
+    { seq: 43, fullName: 'Tusher Hossain', teamId: 'team-abd-sports', catId: 'cat-bat-all-lvl-2' },
+    { seq: 44, fullName: 'Rony Khan', teamId: 'team-warriors', catId: 'cat-bat-all-lvl-2' },
+    { seq: 45, fullName: 'Jahangir (2)', teamId: 'team-prime', catId: 'cat-bat-all-lvl-2' },
+    { seq: 46, fullName: 'HK RONY', teamId: 'team-fearless', catId: 'cat-bat-all-lvl-2' },
+    { seq: 47, fullName: 'LKD Sadek', teamId: 'team-mighty', catId: 'cat-bat-all-lvl-2' },
+    { seq: 48, fullName: 'RS Rafiq', teamId: 'team-amra-amroi', catId: 'cat-bat-all-lvl-2' },
+
+    // --- Round 9: Bowling ---
+    { seq: 49, fullName: 'Asif', teamId: 'team-abd-sports', catId: 'cat-bowling' },
+    { seq: 50, fullName: 'Md. Mostafizur Rahman', teamId: 'team-warriors', catId: 'cat-bowling' },
+    { seq: 51, fullName: 'Rifat', teamId: 'team-prime', catId: 'cat-bowling' },
+    { seq: 52, fullName: 'Nahid', teamId: 'team-fearless', catId: 'cat-bowling' },
+    { seq: 53, fullName: 'Sabbir', teamId: 'team-mighty', catId: 'cat-bowling' },
+    { seq: 54, fullName: 'FH Noman', teamId: 'team-amra-amroi', catId: 'cat-bowling' },
+
+    // --- Round 10: Mini All-Rounder ---
+    { seq: 55, fullName: 'Mohammad Nazim', teamId: 'team-abd-sports', catId: 'cat-mini-all' },
+    { seq: 56, fullName: 'Monjurul Islam', teamId: 'team-warriors', catId: 'cat-mini-all' },
+    { seq: 57, fullName: 'M Saiful', teamId: 'team-prime', catId: 'cat-mini-all' },
+    { seq: 58, fullName: 'Raja', teamId: 'team-fearless', catId: 'cat-mini-all' },
+    { seq: 59, fullName: 'Robiul', teamId: 'team-mighty', catId: 'cat-mini-all' },
+    { seq: 60, fullName: 'Jahangir (MH)', teamId: 'team-amra-amroi', catId: 'cat-mini-all' },
+  ];
+
   const players: Player[] = officialPlayersRaw.map((raw, idx) => {
     const jerseyStr = String(idx + 1).padStart(2, '0');
     const playerId = raw.idKey || `player-${idx + 1}`;
     const photo = raw.driveId ? gDriveImg(raw.driveId) : generateCricketAvatar(raw.fullName, jerseyStr, idx + 1);
 
-    // Check if player is a pre-selected captain of any franchise team
-    const teamWithCaptain = teams.find(
-      (t) =>
-        t.captainPlayerId === playerId ||
-        (t.captainName && t.captainName.toLowerCase() === raw.fullName.toLowerCase())
+    // Match in official Season-2 roster/picks
+    const pickAssignment = season2PicksOrder.find(
+      (item) => item.fullName.toLowerCase() === raw.fullName.toLowerCase()
     );
-    const isCaptain = !!teamWithCaptain;
+
+    const isCaptain = !!pickAssignment?.isCaptain || teams.some((t) => t.captainPlayerId === playerId);
+    const badge: PlayerBadge = isCaptain ? 'CAPTAIN' : (raw.badge || 'ALL-ROUNDER');
 
     return {
       id: playerId,
@@ -962,17 +1059,35 @@ export function createSampleDraftData(): {
       playerType: `${raw.bat} • ${raw.bowl}`,
       battingStyle: raw.bat,
       bowlingStyle: raw.bowl,
-      badge: isCaptain ? 'CAPTAIN' : raw.badge,
+      badge,
       photoUrl: photo,
       inDraftPool: true,
       contactEmail: raw.email,
       notes: `Bangla: ${raw.bengaliName || raw.fullName}${raw.contact ? ` | Phone: ${raw.contact}` : ''}${raw.currentTeam ? ` | Prev: ${raw.currentTeam}` : ''}`,
-      status: isCaptain ? 'drafted' : 'available',
+      status: pickAssignment ? 'drafted' : 'available',
       isCaptain,
-      assignedTeamId: teamWithCaptain ? teamWithCaptain.id : undefined,
-      assignedCategoryId: isCaptain ? raw.cat : undefined,
+      assignedTeamId: pickAssignment?.teamId,
+      assignedCategoryId: pickAssignment?.catId || raw.cat,
       createdAt: now,
       updatedAt: now,
+    };
+  });
+
+  const draftStartTime = now - 60 * 60 * 1000 * 2;
+  const picks: PickRecord[] = season2PicksOrder.map((item) => {
+    const matchedPlayer = players.find(
+      (p) => p.fullName.toLowerCase() === item.fullName.toLowerCase()
+    );
+    const playerId = matchedPlayer ? matchedPlayer.id : `player-pick-${item.seq}`;
+
+    return {
+      id: `pick-s2-${String(item.seq).padStart(2, '0')}`,
+      draftId,
+      sequence: item.seq,
+      playerId,
+      teamId: item.teamId,
+      categoryId: item.catId,
+      createdAt: draftStartTime + item.seq * 90 * 1000,
     };
   });
 
@@ -981,7 +1096,8 @@ export function createSampleDraftData(): {
     name: 'Brothers Premier League (BPL)',
     season: 'Season-2',
     logoUrl: DEFAULT_BPL_LOGO,
-    status: 'live',
+    status: 'completed',
+    completedAt: now - 30 * 60 * 1000,
     currentCategoryId: categories[0].id,
     settings: {
       categoryMode: 'category_by_category',
@@ -991,7 +1107,7 @@ export function createSampleDraftData(): {
       reducedMotion: false,
       autoSave: true,
     },
-    createdAt: now,
+    createdAt: draftStartTime,
     updatedAt: now,
   };
 
@@ -1000,5 +1116,6 @@ export function createSampleDraftData(): {
     categories,
     teams,
     players,
+    picks,
   };
 }

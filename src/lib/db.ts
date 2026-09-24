@@ -313,6 +313,19 @@ class DraftDatabase {
     });
   }
 
+  async bulkSavePicks(picks: PickRecord[]): Promise<void> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('picks', 'readwrite');
+      const store = tx.objectStore('picks');
+      for (const pick of picks) {
+        store.put(pick);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
   async deletePick(id: string): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {

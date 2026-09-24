@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Shield,
   Plus,
@@ -14,8 +14,12 @@ import {
   Sliders,
   Users,
   Check,
+  Search,
+  ChevronDown,
+  X,
+  UserCheck,
 } from 'lucide-react';
-import { Category, Player, Team } from '../types';
+import { Category, Player, Team, AppUser } from '../types';
 import { fileToDataUrl } from '../lib/imageUtils';
 
 interface TeamsViewProps {
@@ -23,10 +27,272 @@ interface TeamsViewProps {
   categories: Category[];
   players: Player[];
   activeDraftId: string;
+  currentUser?: AppUser | null;
   onSaveTeam: (team: Team) => Promise<void>;
   onBulkSaveTeams?: (teams: Team[]) => Promise<void>;
   onDeleteTeam: (teamId: string) => Promise<void>;
 }
+
+// Dedicated Alphabetical & Searchable Captain Selector Component
+interface CaptainSelectorDropdownProps {
+  players: Player[];
+  categories: Category[];
+  teams: Team[];
+  currentTeamId?: string;
+  selectedCaptainId?: string;
+  onSelectCaptain: (playerId: string | undefined, playerName: string | undefined) => void;
+}
+
+const CaptainSelectorDropdown: React.FC<CaptainSelectorDropdownProps> = ({
+  players,
+  categories,
+  teams,
+  currentTeamId,
+  selectedCaptainId,
+  onSelectCaptain,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Selected player details
+  const selectedPlayer = useMemo(() => {
+    return players.find((p) => p.id === selectedCaptainId);
+  }, [players, selectedCaptainId]);
+
+  // Strict Alphabetical sorting by Full Name (A-Z)
+  const alphabeticalPlayers = useMemo(() => {
+    return [...players].sort((a, b) =>
+      a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' })
+    );
+  }, [players]);
+
+  // Live search filtering by Name, Category name, player type, or notes/phone
+  const filteredPlayers = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return alphabeticalPlayers;
+
+    return alphabeticalPlayers.filter((p) => {
+      const cat = categories.find((c) => c.id === p.primaryCategoryId);
+      const catName = cat ? cat.name.toLowerCase() : '';
+      const name = p.fullName.toLowerCase();
+      const type = (p.playerType || '').toLowerCase();
+      const notes = (p.notes || '').toLowerCase();
+
+      return (
+        name.includes(q) ||
+        catName.includes(q) ||
+        type.includes(q) ||
+        notes.includes(q)
+      );
+    });
+  }, [alphabeticalPlayers, searchQuery, categories]);
+
+  return (
+    <div className="relative">
+      {/* Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl transition-all text-left group focus:outline-none focus:ring-2 focus:ring-[#1283E6] cursor-pointer"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-200 border border-slate-300 flex items-center justify-center shrink-0">
+            {selectedPlayer?.photoUrl ? (
+              <img
+                src={selectedPlayer.photoUrl}
+                alt={selectedPlayer.fullName}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Crown className={`w-4 h-4 ${selectedPlayer ? 'text-amber-500' : 'text-slate-400'}`} />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            {selectedPlayer ? (
+              <div>
+                <div className="font-bold text-xs text-[#061A36] flex items-center gap-1.5 truncate">
+                  <span>{selectedPlayer.fullName}</span>
+                  <span className="text-[10px] px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded font-semibold shrink-0">
+                    Captain
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 truncate">
+                  {categories.find((c) => c.id === selectedPlayer.primaryCategoryId)?.name ||
+                    selectedPlayer.playerType}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <span className="text-xs font-semibold text-slate-500">
+                  Click to select Captain (Alphabetical A-Z)...
+                </span>
+                <p className="text-[10px] text-slate-400">Searchable by name or role</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0 text-slate-400 group-hover:text-slate-600">
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+
+      {/* Popover / Dropdown Menu */}
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => {
+              setIsOpen(false);
+              setSearchQuery('');
+            }}
+          />
+
+          <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-80">
+            {/* Search Header */}
+            <div className="p-2.5 bg-slate-50 border-b border-slate-200 space-y-2 shrink-0">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search captain by player name or category..."
+                  className="w-full pl-9 pr-8 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#1283E6]"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
+                <span>
+                  Alphabetical Order: <strong>{filteredPlayers.length}</strong> players
+                </span>
+                {selectedCaptainId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectCaptain(undefined, undefined);
+                      setIsOpen(false);
+                      setSearchQuery('');
+                    }}
+                    className="text-red-600 hover:underline font-bold"
+                  >
+                    Clear Captain
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable Player List */}
+            <div className="overflow-y-auto divide-y divide-slate-100 flex-1">
+              {/* Option for No Captain */}
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectCaptain(undefined, undefined);
+                  setIsOpen(false);
+                  setSearchQuery('');
+                }}
+                className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-500 hover:bg-slate-100 flex items-center gap-2 cursor-pointer transition-colors"
+              >
+                <div className="w-7 h-7 rounded-full bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-400">
+                  ✕
+                </div>
+                <span>-- No Captain Assigned --</span>
+              </button>
+
+              {filteredPlayers.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">
+                  No player found matching "{searchQuery}"
+                </div>
+              ) : (
+                filteredPlayers.map((p) => {
+                  const isSelected = p.id === selectedCaptainId;
+                  const cat = categories.find((c) => c.id === p.primaryCategoryId);
+
+                  // Check if player is captain of another team
+                  const otherTeamCaptainOf = teams.find(
+                    (t) => t.id !== currentTeamId && (t.captainPlayerId === p.id || (t.captainName && t.captainName.toLowerCase() === p.fullName.toLowerCase()))
+                  );
+
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        onSelectCaptain(p.id, p.fullName);
+                        setIsOpen(false);
+                        setSearchQuery('');
+                      }}
+                      className={`w-full px-3 py-2 text-left flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-50/80 hover:bg-blue-100/80 text-[#061A36]'
+                          : 'hover:bg-slate-50 text-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 border border-slate-300 shrink-0 flex items-center justify-center">
+                          {p.photoUrl ? (
+                            <img
+                              src={p.photoUrl}
+                              alt={p.fullName}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-600">
+                              {p.fullName.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs truncate flex items-center gap-1.5">
+                            <span>{p.fullName}</span>
+                            {isSelected && (
+                              <span className="text-[10px] text-blue-700 font-extrabold flex items-center gap-0.5">
+                                <Check className="w-3 h-3" />
+                                Selected
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-500 truncate flex items-center gap-1.5">
+                            <span className="font-medium text-slate-700">
+                              {cat?.name || 'Category'}
+                            </span>
+                            {p.playerType && <span>• {p.playerType}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {otherTeamCaptainOf && (
+                        <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 shrink-0">
+                          Captain: {otherTeamCaptainOf.shortName || otherTeamCaptainOf.name}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export const TeamsView: React.FC<TeamsViewProps> = ({
   teams,
@@ -42,6 +308,9 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // User mandate: Preset choices are: 8 players, 10 players, 11 players, 12 players, and underneath custom option
+  const squadPresets = [8, 10, 11, 12];
+
   // Global Franchise Settings State: Default Squad Size & Default Category Quota Limit
   const [defaultSquadSize, setDefaultSquadSize] = useState<number>(() => {
     return teams.length > 0 && teams[0].maxPlayers ? teams[0].maxPlayers : 11;
@@ -51,9 +320,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [showSettingsCard, setShowSettingsCard] = useState(true);
 
-  const squadPresets = [7, 10, 11, 12, 14, 15];
-
-  // Batch update all franchise teams with selected default squad size & quota limit
+  // Apply to All Franchise Teams: directly sets maxPlayers to defaultSquadSize and each quota to defaultQuotaLimit
   const handleApplyToAllTeams = async () => {
     if (teams.length === 0) return;
     try {
@@ -63,11 +330,9 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
         categories.forEach((c) => {
           newQuotas[c.id] = defaultQuotaLimit;
         });
-        const sumQuotas = Object.values(newQuotas).reduce((a, b) => a + (b || 0), 0);
-        const maxPlayers = Math.max(defaultSquadSize, sumQuotas);
         return {
           ...team,
-          maxPlayers,
+          maxPlayers: defaultSquadSize, // Directly apply the chosen squad size (8, 10, 11, 12, or custom)!
           quotas: newQuotas,
           updatedAt: Date.now(),
         };
@@ -82,7 +347,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
       }
 
       setSuccessToast(
-        `Applied ${defaultSquadSize}-player squad & ${defaultQuotaLimit} quota per category to all ${teams.length} teams!`
+        `Applied ${defaultSquadSize}-player squad & ${defaultQuotaLimit} quota per category to all ${teams.length} franchise teams!`
       );
       setTimeout(() => setSuccessToast(null), 4000);
     } catch (err: any) {
@@ -96,7 +361,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
     // Default quotas: 1 per category for all categories
     const defaultQuotas: Record<string, number> = {};
     categories.forEach((c) => {
-      defaultQuotas[c.id] = defaultQuotaLimit; // 1
+      defaultQuotas[c.id] = defaultQuotaLimit;
     });
 
     setEditingTeam({
@@ -107,7 +372,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
       logoUrl: '',
       primaryColor: '#1283E6',
       secondaryColor: '#E6F7FF',
-      maxPlayers: defaultSquadSize, // 11
+      maxPlayers: defaultSquadSize,
       quotas: defaultQuotas,
       active: true,
       createdAt: Date.now(),
@@ -120,7 +385,6 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
   const handleOpenEdit = (team: Team) => {
     const quotas = { ...team.quotas };
     categories.forEach((c) => {
-      // Default quota limit for all categories is 1
       if (quotas[c.id] === undefined) {
         quotas[c.id] = defaultQuotaLimit;
       }
@@ -151,7 +415,6 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
     }
   };
 
-  // Reset category quotas in editing team to 1 for all categories
   const handleSetModalAllQuotas = (quotaVal: number) => {
     if (!editingTeam) return;
     const standardQuotas: Record<string, number> = {};
@@ -176,12 +439,9 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
     e.preventDefault();
     if (!editingTeam || !editingTeam.name.trim()) return;
 
-    const sumQuotas = Object.values(editingTeam.quotas).reduce((a, b) => a + (b || 0), 0);
-    const maxPlayers = Math.max(editingTeam.maxPlayers || defaultSquadSize, sumQuotas);
-
     await onSaveTeam({
       ...editingTeam,
-      maxPlayers,
+      maxPlayers: editingTeam.maxPlayers || defaultSquadSize,
       shortName:
         editingTeam.shortName.trim() ||
         editingTeam.name
@@ -197,8 +457,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
     setEditingTeam(null);
   };
 
-  // Calculations for current overall tournament quotas
-  const totalSquadSlots = teams.reduce((acc, t) => acc + (t.maxPlayers || 11), 0);
+  const totalSquadSlots = teams.reduce((acc, t) => acc + (t.maxPlayers || defaultSquadSize), 0);
   const totalAssignedPlayers = players.filter((p) => p.assignedTeamId).length;
 
   return (
@@ -211,7 +470,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
             Franchise Teams ({teams.length})
           </h2>
           <p className="text-xs text-slate-500">
-            Configure franchise teams, default squad sizes, and category quota limits (Default: 1 per category)
+            Configure franchise teams, default squad sizes (8, 10, 11, 12 or custom), and category quota limits (Default: 1)
           </p>
         </div>
 
@@ -269,19 +528,20 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
             <div className="flex items-center gap-2 shrink-0">
               <button
+                type="button"
                 onClick={handleApplyToAllTeams}
                 disabled={isApplyingAll || teams.length === 0}
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#FF7A2E] hover:bg-[#e0661e] text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-[#FF7A2E] hover:bg-[#e0661e] text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{isApplyingAll ? 'Applying...' : 'Apply to All Franchise Teams'}</span>
+                <span>{isApplyingAll ? 'Applying to Teams...' : 'Apply to All Franchise Teams'}</span>
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-            {/* 1. Default Player Squad Size */}
-            <div className="space-y-2.5 p-4 rounded-xl bg-white/5 border border-white/10">
+            {/* 1. Default Player Squad Size (8, 10, 11, 12, and custom underneath) */}
+            <div className="space-y-3 p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center justify-between">
                 <label className="font-bold text-slate-200 flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-emerald-400" />
@@ -292,41 +552,47 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                 </span>
               </div>
 
-              {/* Preset buttons */}
-              <div className="flex flex-wrap items-center gap-1.5">
+              {/* Preset buttons: 8 players, 10 players, 11 players, 12 players */}
+              <div className="flex flex-wrap items-center gap-2">
                 {squadPresets.map((size) => (
                   <button
                     key={size}
                     type="button"
                     onClick={() => setDefaultSquadSize(size)}
-                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
                       defaultSquadSize === size
-                        ? 'bg-[#1283E6] text-white shadow-xs scale-105'
+                        ? 'bg-[#1283E6] text-white shadow-md scale-105 ring-2 ring-blue-400'
                         : 'bg-white/10 text-slate-300 hover:bg-white/20'
                     }`}
                   >
-                    {size} {size === 11 ? '★ (Official BPL)' : size === 7 ? '(Mini)' : 'Players'}
+                    {size} Players {size === 11 ? '★ (Official BPL)' : ''}
                   </button>
                 ))}
               </div>
 
-              {/* Custom size input */}
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-slate-400 text-[11px]">Custom Squad Limit:</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={defaultSquadSize}
-                  onChange={(e) => setDefaultSquadSize(Math.max(1, parseInt(e.target.value) || 11))}
-                  className="w-20 px-2.5 py-1 text-center bg-slate-900/80 border border-slate-700 rounded-lg text-white font-bold focus:outline-none focus:border-[#1283E6]"
-                />
-                <span className="text-[11px] text-slate-400">players</span>
+              {/* Custom Option Underneath */}
+              <div className="pt-2 border-t border-white/10 space-y-1.5">
+                <span className="text-slate-400 text-[11px] font-semibold block">
+                  Or Enter Custom Squad Option:
+                </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={defaultSquadSize}
+                    onChange={(e) => setDefaultSquadSize(Math.max(1, parseInt(e.target.value) || 11))}
+                    className="w-24 px-3 py-1.5 text-center bg-slate-900/90 border border-slate-700 rounded-lg text-white font-bold focus:outline-none focus:border-[#1283E6]"
+                  />
+                  <span className="text-[11px] text-slate-300">
+                    players (e.g. 7, 9, 14, 15)
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* 2. Default Quota Limit for Categories */}
-            <div className="space-y-2.5 p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="space-y-3 p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center justify-between">
                 <label className="font-bold text-slate-200 flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-amber-400" />
@@ -338,13 +604,13 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
               </div>
 
               {/* Quota preset options */}
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setDefaultQuotaLimit(1)}
-                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1 cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
                     defaultQuotaLimit === 1
-                      ? 'bg-amber-500 text-slate-950 font-extrabold shadow-xs scale-105'
+                      ? 'bg-amber-500 text-slate-950 font-extrabold shadow-md scale-105'
                       : 'bg-white/10 text-slate-300 hover:bg-white/20'
                   }`}
                 >
@@ -355,9 +621,9 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setDefaultQuotaLimit(2)}
-                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
                     defaultQuotaLimit === 2
-                      ? 'bg-[#1283E6] text-white shadow-xs'
+                      ? 'bg-[#1283E6] text-white shadow-md'
                       : 'bg-white/10 text-slate-300 hover:bg-white/20'
                   }`}
                 >
@@ -365,20 +631,24 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                 </button>
               </div>
 
-              {/* Custom Quota input */}
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-slate-400 text-[11px]">Custom Category Quota:</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  value={defaultQuotaLimit}
-                  onChange={(e) => setDefaultQuotaLimit(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-20 px-2.5 py-1 text-center bg-slate-900/80 border border-slate-700 rounded-lg text-white font-bold focus:outline-none focus:border-[#1283E6]"
-                />
-                <span className="text-[11px] text-slate-400">
-                  (e.g. 1 pick from each of {categories.length} categories = {categories.length * defaultQuotaLimit} quota slots)
+              {/* Custom Quota input underneath */}
+              <div className="pt-2 border-t border-white/10 space-y-1.5">
+                <span className="text-slate-400 text-[11px] font-semibold block">
+                  Or Enter Custom Category Quota:
                 </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={defaultQuotaLimit}
+                    onChange={(e) => setDefaultQuotaLimit(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-24 px-3 py-1.5 text-center bg-slate-900/90 border border-slate-700 rounded-lg text-white font-bold focus:outline-none focus:border-[#1283E6]"
+                  />
+                  <span className="text-[11px] text-slate-300">
+                    (e.g. 1 pick from {categories.length} categories = {categories.length * defaultQuotaLimit} quota slots)
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -393,7 +663,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                 • Tournament Roster Demand: <strong className="text-white">{teams.length * defaultSquadSize} slots</strong>
               </span>
               <span>
-                • Total Quotas per Team: <strong className="text-white">{categories.length * defaultQuotaLimit} category slots</strong>
+                • Category Quotas per Team: <strong className="text-white">{categories.length * defaultQuotaLimit} category slots</strong>
                 {defaultSquadSize > categories.length * defaultQuotaLimit && (
                   <span className="text-amber-300 ml-1">
                     (+{defaultSquadSize - categories.length * defaultQuotaLimit} Captain/Wildcard slot)
@@ -521,7 +791,6 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs">
                       {categories.map((cat) => {
-                        // Default quota is 1 per category
                         const targetQuota = team.quotas[cat.id] ?? defaultQuotaLimit;
                         const draftedInCat = teamPlayers.filter(
                           (p) => p.primaryCategoryId === cat.id || p.assignedCategoryId === cat.id
@@ -712,59 +981,61 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Maximum Squad Quota & Presets */}
+                {/* Squad Quota Limit: 8, 10, 11, 12 and custom underneath */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="font-semibold text-slate-700">
-                      Total Squad Quota (Default: {defaultSquadSize})
+                      Total Squad Quota Limit
                     </label>
                     <span className="text-[11px] font-bold text-slate-500">
                       Target: {editingTeam.maxPlayers || defaultSquadSize} Players
                     </span>
                   </div>
 
-                  {/* Preset quick buttons */}
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  {/* Preset quick buttons: 8, 10, 11, 12 */}
+                  <div className="flex flex-wrap items-center gap-2">
                     {squadPresets.map((size) => (
                       <button
                         key={size}
                         type="button"
                         onClick={() => handleSetModalSquadSize(size)}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                           editingTeam.maxPlayers === size
-                            ? 'bg-[#1283E6] text-white shadow-2xs'
+                            ? 'bg-[#1283E6] text-white shadow-xs scale-105'
                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                         }`}
                       >
-                        {size} {size === 11 ? '(Standard)' : ''}
+                        {size} Players {size === 11 ? '(Standard)' : ''}
                       </button>
                     ))}
                   </div>
 
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={editingTeam.maxPlayers}
-                    onChange={(e) =>
-                      setEditingTeam({
-                        ...editingTeam,
-                        maxPlayers: Math.max(1, parseInt(e.target.value) || defaultSquadSize),
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#1283E6]"
-                  />
-                  <p className="text-[11px] text-slate-500">
-                    Standard BPL squad size is 11 players (10 category picks + 1 team captain).
-                  </p>
+                  {/* Custom Option Underneath */}
+                  <div className="pt-1.5 flex items-center gap-2">
+                    <span className="text-slate-500 text-[11px]">Or Custom Squad Limit:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={editingTeam.maxPlayers}
+                      onChange={(e) =>
+                        setEditingTeam({
+                          ...editingTeam,
+                          maxPlayers: Math.max(1, parseInt(e.target.value) || defaultSquadSize),
+                        })
+                      }
+                      className="w-20 px-2.5 py-1 text-center bg-slate-50 border border-slate-300 rounded-lg text-slate-800 font-bold focus:outline-none focus:border-[#1283E6]"
+                    />
+                    <span className="text-slate-400 text-[11px]">players</span>
+                  </div>
                 </div>
 
-                {/* Team Captain Selector */}
-                <div className="pt-2 border-t border-slate-100">
+                {/* Team Captain Selector with Alphabetical Order & Search Bar */}
+                <div className="pt-2 border-t border-slate-100 space-y-1.5">
                   <div className="flex items-center justify-between mb-1">
                     <label className="font-bold text-slate-800 flex items-center gap-1.5">
                       <Crown className="w-4 h-4 text-amber-500" />
-                      Team Captain
+                      Team Captain (Alphabetical Searchable)
                     </label>
                     {editingTeam.captainPlayerId && (
                       <button
@@ -782,41 +1053,23 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                       </button>
                     )}
                   </div>
-                  <select
-                    value={editingTeam.captainPlayerId || ''}
-                    onChange={(e) => {
-                      const pId = e.target.value;
-                      if (!pId) {
-                        setEditingTeam({
-                          ...editingTeam,
-                          captainPlayerId: undefined,
-                          captainName: undefined,
-                        });
-                      } else {
-                        const found = players.find((p) => p.id === pId);
-                        setEditingTeam({
-                          ...editingTeam,
-                          captainPlayerId: pId,
-                          captainName: found ? found.fullName : '',
-                        });
-                      }
+
+                  <CaptainSelectorDropdown
+                    players={players}
+                    categories={categories}
+                    teams={teams}
+                    currentTeamId={editingTeam.id}
+                    selectedCaptainId={editingTeam.captainPlayerId}
+                    onSelectCaptain={(playerId, playerName) => {
+                      setEditingTeam({
+                        ...editingTeam,
+                        captainPlayerId: playerId,
+                        captainName: playerName,
+                      });
                     }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#1283E6] font-medium text-slate-800"
-                  >
-                    <option value="">-- No Captain Selected --</option>
-                    {players.map((p) => {
-                      const isAssignedToThis = p.assignedTeamId === editingTeam.id;
-                      const cat = categories.find((c) => c.id === p.primaryCategoryId);
-                      return (
-                        <option key={p.id} value={p.id}>
-                          {p.fullName} {isAssignedToThis ? '★ (Drafted in this team)' : ''} (
-                          {cat ? cat.name : p.playerType})
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Select any player to lead this franchise team as official Captain.
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    Click to browse all players in alphabetical order (A-Z) with live search.
                   </p>
                 </div>
 
@@ -905,11 +1158,11 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                           Role Quotas Total: <strong className="text-slate-800">{quotaSum}</strong> / Squad Quota:{' '}
                           <strong className="text-slate-800">{squadCap}</strong>
                         </span>
-                        <span className={diff >= 0 ? 'text-emerald-700 font-bold' : 'text-red-600 font-bold'}>
+                        <span className={diff >= 0 ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
                           {diff === 0 && '✓ Perfectly Balanced'}
                           {diff === 1 && '✓ 1 Slot for Captain/Wildcard'}
                           {diff > 1 && `${diff} Open Slots`}
-                          {diff < 0 && `⚠️ Quotas exceed squad by ${Math.abs(diff)}`}
+                          {diff < 0 && `Quotas (${quotaSum}) exceed squad size (${squadCap})`}
                         </span>
                       </div>
                     );

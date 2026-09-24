@@ -103,6 +103,16 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Side Controls */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Live Real-time Cloud Sync Beacon */}
+          <div
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700"
+            title="Real-time Firestore Database Connected: Any changes by Superadmin update the whole website instantly"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="hidden xl:inline">Live Cloud Sync</span>
+            <span className="xl:hidden">Live</span>
+          </div>
+
           {/* Quick Superadmin Button if logged in */}
           {isSuperadmin && onOpenSuperadminPortal && (
             <button

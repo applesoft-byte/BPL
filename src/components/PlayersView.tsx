@@ -15,8 +15,10 @@ import {
   Sparkles,
   Camera,
   Image as ImageIcon,
+  Loader2,
+  Cloud,
 } from 'lucide-react';
-import { Category, Player, PlayerBadge, Team } from '../types';
+import { Category, Player, PlayerBadge, Team, AppUser } from '../types';
 import { CsvImportModal } from './CsvImportModal';
 import { DraftPoolModal } from './DraftPoolModal';
 import { fileToDataUrl } from '../lib/imageUtils';
@@ -26,6 +28,7 @@ interface PlayersViewProps {
   categories: Category[];
   teams: Team[];
   activeDraftId: string;
+  currentUser?: AppUser | null;
   onSavePlayer: (player: Player) => Promise<void>;
   onBulkSavePlayers: (players: Player[]) => Promise<void>;
   onDeletePlayer: (playerId: string) => Promise<void>;
@@ -36,6 +39,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
   categories,
   teams,
   activeDraftId,
+  currentUser,
   onSavePlayer,
   onBulkSavePlayers,
   onDeletePlayer,
@@ -51,6 +55,17 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Quick Direct Card Photo Upload State & Feedback Toast
+  const [uploadingPlayerId, setUploadingPlayerId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((prev) => (prev === msg ? null : prev));
+    }, 4000);
+  };
 
   // CSV & Pool Modal State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -242,9 +257,15 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
             <Users className="w-5 h-5 text-[#1283E6]" />
             Cricket Player Registry ({players.length})
           </h2>
-          <p className="text-xs text-slate-500">
-            Upload player photos, manage draft selection pool ({poolCount} selected), and edit cricket disciplines
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <p className="text-xs text-slate-500">
+              Upload player photos, manage draft selection pool ({poolCount} selected), and edit cricket disciplines
+            </p>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Instant Database & Website Sync
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -373,8 +394,15 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                 <div>
                   {/* Card Top: Photo & Badges */}
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="relative">
-                      <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
+                    <div className="relative group/avatar">
+                      <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs relative">
+                        {uploadingPlayerId === player.id ? (
+                          <div className="absolute inset-0 bg-[#061A36]/80 flex flex-col items-center justify-center text-white z-20">
+                            <Loader2 className="w-5 h-5 animate-spin text-[#1283E6]" />
+                            <span className="text-[8px] font-bold mt-1">Saving...</span>
+                          </div>
+                        ) : null}
+
                         {player.photoUrl ? (
                           <img
                             src={player.photoUrl}
@@ -387,8 +415,43 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                             <Users className="w-6 h-6" />
                           </div>
                         )}
+
+                        {/* Quick Hover Photo Upload Overlay */}
+                        <label
+                          className="absolute inset-0 bg-[#061A36]/75 opacity-0 group-hover/avatar:opacity-100 flex flex-col items-center justify-center text-white transition-opacity cursor-pointer z-10 text-center p-1"
+                          title="Click to change photo instantly (stored in database & website)"
+                        >
+                          <Camera className="w-4 h-4 text-amber-400" />
+                          <span className="text-[8px] font-extrabold tracking-tight mt-0.5 leading-none">Photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingPlayerId === player.id}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              try {
+                                setUploadingPlayerId(player.id);
+                                const dataUrl = await fileToDataUrl(file, 400, 400, 0.85);
+                                const updated = {
+                                  ...player,
+                                  photoUrl: dataUrl,
+                                  updatedAt: Date.now(),
+                                };
+                                await onSavePlayer(updated);
+                                showToast(`Photo for "${player.fullName}" stored in database and live on website!`);
+                              } catch (err: any) {
+                                alert(err.message || 'Failed to upload photo');
+                              } finally {
+                                setUploadingPlayerId(null);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
-                      <div className="absolute -bottom-1.5 -right-1.5 px-1.5 py-0.2 bg-[#061A36] text-white font-extrabold text-[10px] rounded-md shadow-xs">
+                      <div className="absolute -bottom-1.5 -right-1.5 px-1.5 py-0.2 bg-[#061A36] text-white font-extrabold text-[10px] rounded-md shadow-xs z-10">
                         #{player.jerseyNumber || '00'}
                       </div>
                     </div>
@@ -463,6 +526,40 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                   </button>
 
                   <div className="flex items-center gap-1">
+                    {/* Instant Camera Upload Button */}
+                    <label
+                      className="p-1.5 text-slate-400 hover:text-[#1283E6] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer inline-flex items-center"
+                      title="Upload new photo directly to database & website"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingPlayerId === player.id}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            setUploadingPlayerId(player.id);
+                            const dataUrl = await fileToDataUrl(file, 400, 400, 0.85);
+                            const updated = {
+                              ...player,
+                              photoUrl: dataUrl,
+                              updatedAt: Date.now(),
+                            };
+                            await onSavePlayer(updated);
+                            showToast(`Photo for "${player.fullName}" stored in database and live on website!`);
+                          } catch (err: any) {
+                            alert(err.message || 'Failed to upload photo');
+                          } finally {
+                            setUploadingPlayerId(null);
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                    </label>
+
                     <button
                       onClick={() => handleOpenEdit(player)}
                       className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
@@ -746,6 +843,28 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
           teams={teams}
           onUpdateDraftPool={handleUpdateDraftPool}
         />
+      )}
+
+      {/* Toast Notification for Database & Website Sync Confirmation */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#061A36] text-white px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/50 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <CheckCircle className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 pr-2">
+            <p className="text-xs font-bold text-white">{toastMessage}</p>
+            <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
+              <Cloud className="w-3 h-3 inline" />
+              <span>Saved to Firestore Database & Live across all devices</span>
+            </p>
+          </div>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 text-xs ml-auto"
+          >
+            ✕
+          </button>
+        </div>
       )}
     </div>
   );

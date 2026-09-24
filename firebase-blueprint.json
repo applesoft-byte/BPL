@@ -23,7 +23,7 @@
         "photoURL": {
           "type": "string",
           "description": "Avatar image URL",
-          "maxLength": 2048
+          "maxLength": 1048576
         },
         "role": {
           "type": "string",
@@ -90,7 +90,12 @@
         "logoUrl": {
           "type": "string",
           "description": "Tournament emblem logo URL",
-          "maxLength": 2048
+          "maxLength": 1048576
+        },
+        "tagline": {
+          "type": "string",
+          "description": "League tagline",
+          "maxLength": 256
         },
         "draftDate": {
           "type": "string",
@@ -172,7 +177,7 @@
         "logoUrl": {
           "type": "string",
           "description": "Team crest logo URL",
-          "maxLength": 2048
+          "maxLength": 1048576
         },
         "primaryColor": {
           "type": "string",
@@ -263,7 +268,16 @@
         "photoUrl": {
           "type": "string",
           "description": "Player profile photograph URL",
-          "maxLength": 2048
+          "maxLength": 1048576
+        },
+        "notes": {
+          "type": "string",
+          "description": "Player notes or Bangla script details",
+          "maxLength": 512
+        },
+        "isCaptain": {
+          "type": "boolean",
+          "description": "Designated franchise team captain status"
         },
         "inDraftPool": {
           "type": "boolean",
@@ -346,7 +360,7 @@
           "maxLength": 128
         },
         "createdAt": {
-          "number": "number",
+          "type": "number",
           "description": "Creation timestamp"
         },
         "updatedAt": {

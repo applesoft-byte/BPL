@@ -64,7 +64,7 @@ export const firebaseDb = {
   },
 
   // --- Draft Tournament Operations ---
-  async saveDraft(draft: Draft, ownerId: string): Promise<void> {
+  async saveDraft(draft: Draft, ownerId: string = 'superadmin'): Promise<void> {
     const path = `drafts/${draft.id}`;
     try {
       const docRef = doc(db, 'drafts', draft.id);
@@ -79,7 +79,8 @@ export const firebaseDb = {
         organizerRole: draft.organizerRole || '',
         slogan: draft.slogan || '',
         subSlogan: draft.subSlogan || '',
-        defaultPlayerQuota: draft.defaultPlayerQuota || 7,
+        tagline: draft.tagline || '',
+        defaultPlayerQuota: draft.defaultPlayerQuota || 11,
         currentCategoryId: draft.currentCategoryId || '',
         settings: draft.settings,
         ownerId,
@@ -119,31 +120,35 @@ export const firebaseDb = {
   },
 
   // --- Teams Operations ---
-  async saveTeams(teams: Team[], ownerId: string): Promise<void> {
+  async saveTeams(teams: Team[], ownerId: string = 'superadmin'): Promise<void> {
     for (const team of teams) {
-      const path = `teams/${team.id}`;
-      try {
-        const cleanTeam = {
-          id: team.id,
-          draftId: team.draftId,
-          name: team.name,
-          shortName: team.shortName,
-          logoUrl: team.logoUrl || '',
-          primaryColor: team.primaryColor,
-          secondaryColor: team.secondaryColor,
-          maxPlayers: team.maxPlayers,
-          captainPlayerId: team.captainPlayerId || '',
-          captainName: team.captainName || '',
-          quotas: team.quotas || {},
-          active: team.active ?? true,
-          ownerId,
-          createdAt: team.createdAt || Date.now(),
-          updatedAt: Date.now(),
-        };
-        await setDoc(doc(db, 'teams', team.id), cleanTeam, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, path);
-      }
+      await this.saveSingleTeam(team, ownerId);
+    }
+  },
+
+  async saveSingleTeam(team: Team, ownerId: string = 'superadmin'): Promise<void> {
+    const path = `teams/${team.id}`;
+    try {
+      const cleanTeam = {
+        id: team.id,
+        draftId: team.draftId,
+        name: team.name,
+        shortName: team.shortName,
+        logoUrl: team.logoUrl || '',
+        primaryColor: team.primaryColor,
+        secondaryColor: team.secondaryColor,
+        maxPlayers: team.maxPlayers,
+        captainPlayerId: team.captainPlayerId || '',
+        captainName: team.captainName || '',
+        quotas: team.quotas || {},
+        active: team.active ?? true,
+        ownerId,
+        createdAt: team.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+      await setDoc(doc(db, 'teams', team.id), cleanTeam, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
     }
   },
 
@@ -161,35 +166,41 @@ export const firebaseDb = {
   },
 
   // --- Players Operations ---
-  async savePlayers(players: Player[], ownerId: string): Promise<void> {
+  async savePlayers(players: Player[], ownerId: string = 'superadmin'): Promise<void> {
     for (const player of players) {
-      const path = `players/${player.id}`;
-      try {
-        const cleanPlayer = {
-          id: player.id,
-          draftId: player.draftId,
-          fullName: player.fullName,
-          jerseyNumber: player.jerseyNumber || '',
-          primaryCategoryId: player.primaryCategoryId,
-          secondaryCategoryId: player.secondaryCategoryId || '',
-          playerType: player.playerType || '',
-          battingStyle: player.battingStyle || 'Right Handed',
-          bowlingStyle: player.bowlingStyle || '',
-          badge: player.badge || 'ALL-ROUNDER',
-          photoUrl: player.photoUrl || '',
-          inDraftPool: player.inDraftPool ?? true,
-          status: player.status || 'available',
-          assignedTeamId: player.assignedTeamId || '',
-          assignedCategoryId: player.assignedCategoryId || '',
-          isCaptain: player.isCaptain ?? false,
-          ownerId,
-          createdAt: player.createdAt || Date.now(),
-          updatedAt: Date.now(),
-        };
-        await setDoc(doc(db, 'players', player.id), cleanPlayer, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, path);
-      }
+      await this.saveSinglePlayer(player, ownerId);
+    }
+  },
+
+  async saveSinglePlayer(player: Player, ownerId: string = 'superadmin'): Promise<void> {
+    const path = `players/${player.id}`;
+    try {
+      const cleanPlayer = {
+        id: player.id,
+        draftId: player.draftId,
+        fullName: player.fullName,
+        jerseyNumber: player.jerseyNumber || '',
+        primaryCategoryId: player.primaryCategoryId,
+        secondaryCategoryId: player.secondaryCategoryId || '',
+        playerType: player.playerType || '',
+        battingStyle: player.battingStyle || 'Right Handed',
+        bowlingStyle: player.bowlingStyle || '',
+        badge: player.badge || 'ALL-ROUNDER',
+        photoUrl: player.photoUrl || '',
+        inDraftPool: player.inDraftPool ?? true,
+        status: player.status || 'available',
+        assignedTeamId: player.assignedTeamId || '',
+        assignedCategoryId: player.assignedCategoryId || '',
+        isCaptain: player.isCaptain ?? false,
+        notes: player.notes || '',
+        contactEmail: player.contactEmail || '',
+        ownerId,
+        createdAt: player.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+      await setDoc(doc(db, 'players', player.id), cleanPlayer, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
     }
   },
 
@@ -207,26 +218,30 @@ export const firebaseDb = {
   },
 
   // --- Categories Operations ---
-  async saveCategories(categories: Category[], ownerId: string): Promise<void> {
+  async saveCategories(categories: Category[], ownerId: string = 'superadmin'): Promise<void> {
     for (const cat of categories) {
-      const path = `categories/${cat.id}`;
-      try {
-        const cleanCat = {
-          id: cat.id,
-          draftId: cat.draftId,
-          name: cat.name,
-          color: cat.color,
-          iconName: cat.iconName || 'Award',
-          order: cat.order,
-          active: cat.active ?? true,
-          ownerId,
-          createdAt: cat.createdAt || Date.now(),
-          updatedAt: Date.now(),
-        };
-        await setDoc(doc(db, 'categories', cat.id), cleanCat, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, path);
-      }
+      await this.saveSingleCategory(cat, ownerId);
+    }
+  },
+
+  async saveSingleCategory(cat: Category, ownerId: string = 'superadmin'): Promise<void> {
+    const path = `categories/${cat.id}`;
+    try {
+      const cleanCat = {
+        id: cat.id,
+        draftId: cat.draftId,
+        name: cat.name,
+        color: cat.color,
+        iconName: cat.iconName || 'Award',
+        order: cat.order,
+        active: cat.active ?? true,
+        ownerId,
+        createdAt: cat.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+      await setDoc(doc(db, 'categories', cat.id), cleanCat, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
     }
   },
 
@@ -244,7 +259,7 @@ export const firebaseDb = {
   },
 
   // --- Picks Operations ---
-  async savePick(pick: PickRecord, ownerId: string): Promise<void> {
+  async savePick(pick: PickRecord, ownerId: string = 'superadmin'): Promise<void> {
     const path = `picks/${pick.id}`;
     try {
       const cleanPick = {
@@ -339,6 +354,22 @@ export const firebaseDb = {
         const list: Team[] = [];
         snap.forEach((d) => list.push(d.data() as Team));
         onUpdate(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  },
+
+  subscribeCategories(draftId: string, onUpdate: (categories: Category[]) => void): Unsubscribe {
+    const path = 'categories';
+    const q = query(collection(db, 'categories'), where('draftId', '==', draftId));
+    return onSnapshot(
+      q,
+      (snap) => {
+        const list: Category[] = [];
+        snap.forEach((d) => list.push(d.data() as Category));
+        onUpdate(list.sort((a, b) => a.order - b.order));
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, path);

@@ -139,173 +139,231 @@ export const DEFAULT_BPL_LOGO = `data:image/svg+xml;utf8,${encodeURIComponent(`
 `)}`;
 
 /**
- * Team Logos (Matching Image 1 & 2)
+ * Official BPL Season-2 Franchise Team Logos (Matching Official Poster)
  */
 export const TEAM_DEFAULT_LOGOS: Record<string, string> = {
-  'team-warriors': `data:image/svg+xml;utf8,${encodeURIComponent(`
+  // 1. ABD SPORTS BROTHERS (Cricketer Batsman swinging bat + Cyan Theme)
+  'team-abd-sports': `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
   <defs>
-    <linearGradient id="bwShield" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0A244A"/>
-      <stop offset="100%" stop-color="#021024"/>
+    <linearGradient id="asbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="50%" stop-color="#0369A1"/>
+      <stop offset="100%" stop-color="#082F49"/>
     </linearGradient>
-    <radialGradient id="bwBall" cx="30%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="#FF6B6B"/>
-      <stop offset="60%" stop-color="#DC2626"/>
+    <radialGradient id="asbBall" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FF5252"/>
+      <stop offset="70%" stop-color="#DC2626"/>
       <stop offset="100%" stop-color="#7F1D1D"/>
     </radialGradient>
   </defs>
-  <!-- Shield -->
-  <path d="M80 14 L138 38 V92 C138 122 80 146 80 146 C80 146 22 122 22 92 V38 L80 14 Z" fill="url(#bwShield)" stroke="#16A34A" stroke-width="5"/>
-  <!-- Crossed Bats -->
-  <path d="M48 42 L112 106 M52 38 L116 102" stroke="#EAB308" stroke-width="5" stroke-linecap="round"/>
-  <path d="M112 42 L48 106 M108 38 L44 102" stroke="#EAB308" stroke-width="5" stroke-linecap="round"/>
-  <!-- Cricket Ball -->
-  <circle cx="80" cy="72" r="22" fill="url(#bwBall)" stroke="#FFFFFF" stroke-width="2"/>
-  <path d="M68 64 C74 68, 86 78, 92 82" stroke="#FFFFFF" stroke-width="2.5"/>
-  <!-- Green Ribbon with Team Name -->
-  <rect x="18" y="104" width="124" height="26" rx="6" fill="#16A34A" stroke="#FFFFFF" stroke-width="2"/>
-  <text x="80" y="122" font-family="'Arial Black', sans-serif" font-size="11" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
+  <!-- Shield Outline -->
+  <path d="M80 12 L140 36 V96 C140 126 80 150 80 150 C80 150 20 126 20 96 V36 L80 12 Z" fill="url(#asbGrad)" stroke="#38BDF8" stroke-width="4.5"/>
+  <path d="M80 20 L132 42 V92 C132 118 80 140 80 140 C80 140 28 118 28 92 V42 L80 20 Z" fill="#082F49" stroke="#0284C7" stroke-width="1.5"/>
+  <!-- Batsman Figure Silhouette swinging bat -->
+  <circle cx="80" cy="46" r="11" fill="#BAE6FD"/>
+  <path d="M72 42 L88 42 L90 48 L74 48 Z" fill="#0284C7"/> <!-- Helmet Visor -->
+  <path d="M68 58 C68 54 92 54 92 58 L96 78 L86 86 L82 72 L78 86 L64 78 Z" fill="#38BDF8"/>
+  <!-- Cricket Bat in Motion -->
+  <path d="M92 60 L126 42 L130 48 L96 66 Z" fill="#F59E0B" stroke="#78350F" stroke-width="1.5"/>
+  <rect x="88" y="62" width="6" height="14" rx="2" fill="#FFFFFF" transform="rotate(-30 88 62)"/>
+  <!-- Red Cricket Ball -->
+  <circle cx="118" cy="74" r="9" fill="url(#asbBall)" stroke="#FFFFFF" stroke-width="1.5"/>
+  <path d="M112 70 C116 74 120 78 124 80" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="2 2"/>
+  <!-- Ribbon Banner -->
+  <rect x="14" y="106" width="132" height="24" rx="5" fill="#0284C7" stroke="#BAE6FD" stroke-width="1.5"/>
+  <text x="80" y="122" font-family="'Arial Black', sans-serif" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
+    ABD SPORTS
+  </text>
+  <text x="80" y="142" font-family="'Arial Black', sans-serif" font-size="8.5" font-weight="900" fill="#38BDF8" text-anchor="middle" letter-spacing="1">
     BROTHERS
   </text>
-  <text x="80" y="140" font-family="sans-serif" font-size="8" font-weight="800" fill="#86EFAC" text-anchor="middle" letter-spacing="1">
+</svg>
+`)}`,
+
+  // 2. BROTHERS WARRIORS (Spartan Helmet + Crimson Red)
+  'team-warriors': `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="bwGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626"/>
+      <stop offset="60%" stop-color="#991B1B"/>
+      <stop offset="100%" stop-color="#450A0A"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield Frame -->
+  <path d="M80 12 L140 36 V96 C140 126 80 150 80 150 C80 150 20 126 20 96 V36 L80 12 Z" fill="url(#bwGrad)" stroke="#EF4444" stroke-width="4.5"/>
+  <path d="M80 20 L132 42 V92 C132 118 80 140 80 140 C80 140 28 118 28 92 V42 L80 20 Z" fill="#1C1917" stroke="#DC2626" stroke-width="1.5"/>
+  <!-- Spartan Warrior Helmet Plume -->
+  <path d="M80 28 C92 28 96 38 96 46 C96 56 80 58 80 58 C80 58 64 56 64 46 C64 38 68 28 80 28 Z" fill="#DC2626" stroke="#EF4444" stroke-width="1.5"/>
+  <!-- Helmet Dome -->
+  <path d="M62 48 C62 38 98 38 98 48 L100 68 L88 88 L80 82 L72 88 L60 68 Z" fill="#B91C1C" stroke="#FCA5A5" stroke-width="1.5"/>
+  <!-- T-Shaped Spartan Visor Eye Slit -->
+  <path d="M68 62 H92 V70 H83 V82 H77 V70 H68 Z" fill="#000000" stroke="#F87171" stroke-width="1"/>
+  <!-- Ribbon Banner -->
+  <rect x="14" y="106" width="132" height="24" rx="5" fill="#991B1B" stroke="#FECACA" stroke-width="1.5"/>
+  <text x="80" y="122" font-family="'Arial Black', sans-serif" font-size="9" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
+    BROTHERS
+  </text>
+  <text x="80" y="142" font-family="'Arial Black', sans-serif" font-size="9.5" font-weight="900" fill="#F87171" text-anchor="middle" letter-spacing="1">
     WARRIORS
   </text>
 </svg>
 `)}`,
 
+  // 3. PRIME BROTHERS (Golden Lion with Crown)
   'team-prime': `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
   <defs>
-    <radialGradient id="pbGlow" cx="50%" cy="50%" r="50%">
+    <linearGradient id="pbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#F59E0B"/>
-      <stop offset="100%" stop-color="#0A1828"/>
-    </radialGradient>
-    <linearGradient id="pbGold" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FDE68A"/>
       <stop offset="50%" stop-color="#D97706"/>
-      <stop offset="100%" stop-color="#78350F"/>
+      <stop offset="100%" stop-color="#451A03"/>
     </linearGradient>
-  </defs>
-  <!-- Circle Crest -->
-  <circle cx="80" cy="80" r="70" fill="#0A1828" stroke="url(#pbGold)" stroke-width="6"/>
-  <circle cx="80" cy="80" r="62" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 3"/>
-  <!-- Crossed Bats -->
-  <path d="M42 42 L118 118" stroke="#D97706" stroke-width="6" stroke-linecap="round"/>
-  <path d="M118 42 L42 118" stroke="#D97706" stroke-width="6" stroke-linecap="round"/>
-  <!-- Ball -->
-  <circle cx="114" cy="72" r="14" fill="#DC2626" stroke="#FFFFFF" stroke-width="2"/>
-  <!-- PB Monogram -->
-  <text x="76" y="88" font-family="'Impact', 'Arial Black', sans-serif" font-size="44" font-weight="900" fill="url(#pbGold)" text-anchor="middle">
-    PB
-  </text>
-  <!-- CRICKET Banner -->
-  <rect x="30" y="96" width="100" height="22" rx="4" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
-  <text x="80" y="112" font-family="'Arial Black', sans-serif" font-size="11" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-    CRICKET
-  </text>
-  <text x="80" y="132" font-family="sans-serif" font-size="8.5" font-weight="800" fill="#FDE68A" text-anchor="middle" letter-spacing="0.5">
-    PRIME BROTHERS XI
-  </text>
-</svg>
-`)}`,
-
-  'team-kings': `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <defs>
-    <linearGradient id="crownGold" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="goldMane" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FEF08A"/>
-      <stop offset="50%" stop-color="#EAB308"/>
-      <stop offset="100%" stop-color="#A16207"/>
-    </linearGradient>
-  </defs>
-  <!-- Backing Shield -->
-  <path d="M80 16 L134 38 V92 C134 122 80 144 80 144 C80 144 26 122 26 92 V38 L80 16 Z" fill="#0A244A" stroke="url(#crownGold)" stroke-width="5"/>
-  <!-- 3D Golden Crown with Gems -->
-  <path d="M46 76 L56 46 L80 66 L104 46 L114 76 Z" fill="url(#crownGold)" stroke="#78350F" stroke-width="2.5"/>
-  <circle cx="56" cy="44" r="5" fill="#FEF08A" stroke="#A16207" stroke-width="1.5"/>
-  <circle cx="80" cy="64" r="6" fill="#FEF08A" stroke="#A16207" stroke-width="1.5"/>
-  <circle cx="104" cy="44" r="5" fill="#FEF08A" stroke="#A16207" stroke-width="1.5"/>
-  <rect x="48" y="76" width="64" height="12" rx="3" fill="#A16207"/>
-  <!-- Jewels on Crown Base -->
-  <circle cx="58" cy="82" r="3" fill="#EF4444"/>
-  <circle cx="80" cy="82" r="3.5" fill="#3B82F6"/>
-  <circle cx="102" cy="82" r="3" fill="#10B981"/>
-  <!-- Text: THE CROWN KINGS -->
-  <text x="80" y="112" font-family="'Arial Black', sans-serif" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
-    THE CROWN KINGS
-  </text>
-  <text x="80" y="126" font-family="sans-serif" font-size="7.5" font-weight="700" fill="#EAB308" text-anchor="middle" letter-spacing="1">
-    RULE THE GAME
-  </text>
-</svg>
-`)}`,
-
-  'team-titans': `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <defs>
-    <linearGradient id="t4Grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1E3A8A"/>
-      <stop offset="100%" stop-color="#0F172A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
     </linearGradient>
   </defs>
   <!-- Shield Frame -->
-  <path d="M80 18 L136 40 V92 C136 122 80 144 80 144 C80 144 24 122 24 92 V40 L80 18 Z" fill="url(#t4Grad)" stroke="#38BDF8" stroke-width="5"/>
-  <!-- Crossed Cricket Stumps and Ball -->
-  <rect x="66" y="44" width="6" height="52" rx="2" fill="#E2E8F0"/>
-  <rect x="77" y="40" width="6" height="56" rx="2" fill="#E2E8F0"/>
-  <rect x="88" y="44" width="6" height="52" rx="2" fill="#E2E8F0"/>
-  <rect x="62" y="38" width="36" height="5" rx="2" fill="#F8FAFC"/>
-  <!-- Red Cricket Ball in Flight -->
-  <circle cx="106" cy="58" r="12" fill="#DC2626" stroke="#FFFFFF" stroke-width="2"/>
-  <path d="M100 54 C104 56, 110 62, 112 66" stroke="#FFFFFF" stroke-width="1.5"/>
-  <!-- Banner -->
-  <rect x="24" y="104" width="112" height="22" rx="4" fill="#0284C7" stroke="#BAE6FD" stroke-width="1.5"/>
-  <text x="80" y="119" font-family="'Arial Black', sans-serif" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-    BROTHERS TITANS
+  <path d="M80 12 L140 36 V96 C140 126 80 150 80 150 C80 150 20 126 20 96 V36 L80 12 Z" fill="url(#pbGrad)" stroke="#FBBF24" stroke-width="4.5"/>
+  <path d="M80 20 L132 42 V92 C132 118 80 140 80 140 C80 140 28 118 28 92 V42 L80 20 Z" fill="#291402" stroke="#F59E0B" stroke-width="1.5"/>
+  <!-- Crown on Lion -->
+  <path d="M66 40 L72 32 L80 37 L88 32 L94 40 Z" fill="#FEF08A" stroke="#B45309" stroke-width="1.5"/>
+  <!-- Majestic Lion Head Silhouette -->
+  <path d="M80 42 C64 44 56 56 56 68 C56 82 66 90 80 92 C94 90 104 82 104 68 C104 56 96 44 80 42 Z" fill="url(#goldMane)"/>
+  <path d="M72 60 L78 64 L74 68 Z M88 60 L82 64 L86 68 Z" fill="#451A03"/> <!-- Eyes -->
+  <path d="M76 74 L84 74 L80 80 Z" fill="#451A03"/> <!-- Nose -->
+  <!-- Ribbon Banner -->
+  <rect x="14" y="106" width="132" height="24" rx="5" fill="#B45309" stroke="#FEF3C7" stroke-width="1.5"/>
+  <text x="80" y="122" font-family="'Arial Black', sans-serif" font-size="10.5" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+    PRIME
+  </text>
+  <text x="80" y="142" font-family="'Arial Black', sans-serif" font-size="8.5" font-weight="900" fill="#FDE68A" text-anchor="middle" letter-spacing="1">
+    BROTHERS
   </text>
 </svg>
 `)}`,
 
+  // 4. FEARLESS BROTHERS (Hooded Ninja / Assassin)
+  'team-fearless': `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="fbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#6D28D9"/>
+      <stop offset="100%" stop-color="#2E1065"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield Frame -->
+  <path d="M80 12 L140 36 V96 C140 126 80 150 80 150 C80 150 20 126 20 96 V36 L80 12 Z" fill="url(#fbGrad)" stroke="#A78BFA" stroke-width="4.5"/>
+  <path d="M80 20 L132 42 V92 C132 118 80 140 80 140 C80 140 28 118 28 92 V42 L80 20 Z" fill="#13072E" stroke="#7C3AED" stroke-width="1.5"/>
+  <!-- Hooded Shadow Warrior -->
+  <path d="M80 28 C64 32 58 48 58 64 C58 78 66 90 80 92 C94 90 102 78 102 64 C102 48 96 32 80 28 Z" fill="#6D28D9" stroke="#C4B5FD" stroke-width="1.5"/>
+  <!-- Dark Face Opening with Glowing Purple Eyes -->
+  <path d="M68 54 C68 48 92 48 92 54 L94 72 L80 78 L66 72 Z" fill="#090217"/>
+  <!-- Glowing Violet Eyes -->
+  <ellipse cx="74" cy="58" rx="4" ry="2" fill="#E9D5FF" stroke="#A855F7" stroke-width="1"/>
+  <ellipse cx="86" cy="58" rx="4" ry="2" fill="#E9D5FF" stroke="#A855F7" stroke-width="1"/>
+  <!-- Ribbon Banner -->
+  <rect x="14" y="106" width="132" height="24" rx="5" fill="#5B21B6" stroke="#DDD6FE" stroke-width="1.5"/>
+  <text x="80" y="122" font-family="'Arial Black', sans-serif" font-size="9.5" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
+    FEARLESS
+  </text>
+  <text x="80" y="142" font-family="'Arial Black', sans-serif" font-size="8.5" font-weight="900" fill="#C4B5FD" text-anchor="middle" letter-spacing="1">
+    BROTHERS
+  </text>
+</svg>
+`)}`,
+
+  // 5. MIGHTY BROTHERS (Fierce Eagle Head)
+  'team-mighty': `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="mbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="50%" stop-color="#0891B2"/>
+      <stop offset="100%" stop-color="#164E63"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield Frame -->
+  <path d="M80 12 L140 36 V96 C140 126 80 150 80 150 C80 150 20 126 20 96 V36 L80 12 Z" fill="url(#mbGrad)" stroke="#22D3EE" stroke-width="4.5"/>
+  <path d="M80 20 L132 42 V92 C132 118 80 140 80 140 C80 140 28 118 28 92 V42 L80 20 Z" fill="#083344" stroke="#06B6D4" stroke-width="1.5"/>
+  <!-- Fierce Eagle Profile -->
+  <path d="M58 52 C62 36 86 34 100 42 C108 46 114 54 116 62 C116 70 102 74 94 72 L86 86 L76 74 C66 74 58 64 58 52 Z" fill="#0891B2" stroke="#67E8F9" stroke-width="1.5"/>
+  <!-- Eagle Hooked Beak -->
+  <path d="M98 54 L118 64 L100 70 Z" fill="#F59E0B" stroke="#B45309" stroke-width="1"/>
+  <!-- Eagle Eye -->
+  <circle cx="84" cy="50" r="3.5" fill="#FEF08A"/>
+  <circle cx="84" cy="50" r="1.5" fill="#000000"/>
+  <!-- Ribbon Banner -->
+  <rect x="14" y="106" width="132" height="24" rx="5" fill="#0E7490" stroke="#CFFAFE" stroke-width="1.5"/>
+  <text x="80" y="122" font-family="'Arial Black', sans-serif" font-size="10.5" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+    MIGHTY
+  </text>
+  <text x="80" y="142" font-family="'Arial Black', sans-serif" font-size="8.5" font-weight="900" fill="#67E8F9" text-anchor="middle" letter-spacing="1">
+    BROTHERS
+  </text>
+</svg>
+`)}`,
+
+  // 6. AMRA AMROI BROTHERS ELEVEN (Powerful Raised Clenched Fist)
+  'team-amra-amroi': `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="aaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="50%" stop-color="#16A34A"/>
+      <stop offset="100%" stop-color="#14532D"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield Frame -->
+  <path d="M80 12 L140 36 V96 C140 126 80 150 80 150 C80 150 20 126 20 96 V36 L80 12 Z" fill="url(#aaGrad)" stroke="#4ADE80" stroke-width="4.5"/>
+  <path d="M80 20 L132 42 V92 C132 118 80 140 80 140 C80 140 28 118 28 92 V42 L80 20 Z" fill="#052E16" stroke="#16A34A" stroke-width="1.5"/>
+  <!-- Raised Fist of Unity & Power -->
+  <path d="M70 88 L70 64 C70 60 74 58 76 58 C78 58 82 60 82 64 L82 88 Z" fill="#22C55E"/>
+  <path d="M64 54 C64 50 96 50 96 54 L98 74 C98 84 92 90 80 92 C68 90 62 84 62 74 Z" fill="#16A34A" stroke="#86EFAC" stroke-width="2"/>
+  <!-- Finger Segments of Clenched Fist -->
+  <rect x="66" y="52" width="6" height="14" rx="3" fill="#4ADE80"/>
+  <rect x="73" y="50" width="6" height="16" rx="3" fill="#4ADE80"/>
+  <rect x="80" y="50" width="6" height="16" rx="3" fill="#4ADE80"/>
+  <rect x="87" y="52" width="6" height="14" rx="3" fill="#4ADE80"/>
+  <path d="M64 68 C64 68 76 68 84 76" stroke="#14532D" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Ribbon Banner -->
+  <rect x="14" y="106" width="132" height="24" rx="5" fill="#15803D" stroke="#DCFCE7" stroke-width="1.5"/>
+  <text x="80" y="122" font-family="'Arial Black', sans-serif" font-size="8" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
+    AMRA AMROI
+  </text>
+  <text x="80" y="142" font-family="'Arial Black', sans-serif" font-size="7.5" font-weight="900" fill="#86EFAC" text-anchor="middle" letter-spacing="0.5">
+    BROTHERS ELEVEN
+  </text>
+</svg>
+`)}`,
+
+  // Backwards compatibility aliases
+  'team-kings': `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <circle cx="80" cy="80" r="70" fill="#0A244A" stroke="#EAB308" stroke-width="6"/>
+  <text x="80" y="88" font-family="'Arial Black', sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle">BPL</text>
+</svg>
+`)}`,
+  'team-titans': `data:image/svg+xml;utf8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <circle cx="80" cy="80" r="70" fill="#0F172A" stroke="#38BDF8" stroke-width="6"/>
+  <text x="80" y="88" font-family="'Arial Black', sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle">BPL</text>
+</svg>
+`)}`,
   'team-strikers': `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <defs>
-    <linearGradient id="bsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#DC2626"/>
-      <stop offset="100%" stop-color="#7F1D1D"/>
-    </linearGradient>
-  </defs>
-  <!-- Flame Shield Frame -->
-  <path d="M80 16 L136 38 V92 C136 122 80 144 80 144 C80 144 24 122 24 92 V38 L80 16 Z" fill="#18181B" stroke="#DC2626" stroke-width="5"/>
-  <!-- Fire Lightning Strike -->
-  <path d="M86 36 L64 74 H86 L74 108 L104 68 H84 L96 36 Z" fill="#F59E0B" stroke="#DC2626" stroke-width="2"/>
-  <!-- Banner -->
-  <rect x="22" y="106" width="116" height="22" rx="4" fill="#DC2626" stroke="#FECACA" stroke-width="1.5"/>
-  <text x="80" y="121" font-family="'Arial Black', sans-serif" font-size="9" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
-    BROTHERS STRIKERS
-  </text>
+  <circle cx="80" cy="80" r="70" fill="#7F1D1D" stroke="#DC2626" stroke-width="6"/>
+  <text x="80" y="88" font-family="'Arial Black', sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle">BPL</text>
 </svg>
 `)}`,
-
   'team-challengers': `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <defs>
-    <linearGradient id="bcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0D9488"/>
-      <stop offset="100%" stop-color="#134E4A"/>
-    </linearGradient>
-  </defs>
-  <!-- Circle Crest -->
   <circle cx="80" cy="80" r="70" fill="#042F2E" stroke="#14B8A6" stroke-width="6"/>
-  <!-- Crossed Bats & Eagle Wings -->
-  <path d="M42 42 L118 118" stroke="#14B8A6" stroke-width="6" stroke-linecap="round"/>
-  <path d="M118 42 L42 118" stroke="#14B8A6" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="80" cy="74" r="16" fill="#F59E0B" stroke="#FFFFFF" stroke-width="2"/>
-  <!-- Banner -->
-  <rect x="18" y="104" width="124" height="24" rx="4" fill="#0D9488" stroke="#99F6E4" stroke-width="1.5"/>
-  <text x="80" y="120" font-family="'Arial Black', sans-serif" font-size="8.5" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">
-    BROTHERS CHALLENGERS
-  </text>
+  <text x="80" y="88" font-family="'Arial Black', sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle">BPL</text>
 </svg>
 `)}`,
 };
