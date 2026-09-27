@@ -17,12 +17,14 @@ import { SettingsView } from './components/SettingsView';
 import { DraftPoolModal } from './components/DraftPoolModal';
 import { AuthModal } from './components/AuthModal';
 import { SuperadminReferenceModal } from './components/SuperadminReferenceModal';
+import { CreateDraftModal } from './components/CreateDraftModal';
 import { Loader2 } from 'lucide-react';
 import { testFirestoreConnection } from './lib/firebase';
 import { firebaseDb } from './lib/firebaseDb';
 import { AppUser } from './types';
 import { authService } from './lib/authService';
 import { sanitizePlayerBangla } from './lib/cleanUtils';
+import { DEFAULT_BPL_LOGO } from './lib/imageUtils';
 
 export default function App() {
   // Navigation View State
@@ -34,6 +36,7 @@ export default function App() {
   const [isGlobalPoolModalOpen, setIsGlobalPoolModalOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isSuperadminPortalOpen, setIsSuperadminPortalOpen] = useState<boolean>(false);
+  const [isCreateDraftModalOpen, setIsCreateDraftModalOpen] = useState<boolean>(false);
 
   // Mobile + Ref Number Auth & Cloud Sync State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => authService.getCurrentUser());
@@ -345,6 +348,13 @@ export default function App() {
       setTeams(dbTeams);
       setCategories(dbCats);
       setPicks(dbPicks);
+
+      const targetDraft = drafts.find((d) => d.id === draftId);
+      if (targetDraft) {
+        localStorage.setItem('bpl_active_tournament_logo', targetDraft.logoUrl || DEFAULT_BPL_LOGO);
+        localStorage.setItem('bpl_active_tournament_name', targetDraft.name);
+        localStorage.setItem('bpl_active_tournament_season', targetDraft.season || 'Season-2');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -395,15 +405,86 @@ export default function App() {
 
   // --- ACTIONS ---
 
-  // Create New Blank Draft
-  const handleCreateNewDraft = async () => {
+  // Open Create New Draft Dialog
+  const handleOpenCreateDraftModal = () => {
+    setIsCreateDraftModalOpen(true);
+  };
+
+  // Create New Draft with User's Logo and Selected Config
+  const handleCreateDraftConfirmed = async (params: {
+    name: string;
+    season: string;
+    logoUrl: string;
+    slogan?: string;
+    subSlogan?: string;
+    importPlayers: boolean;
+    importTeams: boolean;
+    importCategories: boolean;
+  }) => {
     const now = Date.now();
     const newDraftId = `draft-${now}`;
+    const sample = createSampleDraftData();
+
+    // 1. Categories
+    let newCategories: Category[] = [];
+    if (params.importCategories) {
+      newCategories = sample.categories.map((c) => ({
+        ...c,
+        id: `cat-${now}-${c.order}`,
+        draftId: newDraftId,
+        createdAt: now,
+        updatedAt: now,
+      }));
+    }
+
+    // 2. Teams
+    let newTeams: Team[] = [];
+    if (params.importTeams) {
+      newTeams = sample.teams.map((t) => ({
+        ...t,
+        id: `team-${now}-${t.id}`,
+        draftId: newDraftId,
+        createdAt: now,
+        updatedAt: now,
+      }));
+    }
+
+    // 3. Players
+    let newPlayers: Player[] = [];
+    if (params.importPlayers) {
+      newPlayers = sample.players.map((p, idx) => {
+        const origCat = sample.categories.find((c) => c.id === p.primaryCategoryId);
+        const matchedTargetCat = newCategories.find(
+          (c) => origCat && c.name.toLowerCase().trim() === origCat.name.toLowerCase().trim()
+        );
+        const targetCategoryId = matchedTargetCat ? matchedTargetCat.id : newCategories[0]?.id || '';
+
+        return {
+          ...p,
+          id: `player-${now}-${idx}-${p.jerseyNumber || '00'}`,
+          draftId: newDraftId,
+          primaryCategoryId: targetCategoryId,
+          assignedTeamId: undefined,
+          assignedCategoryId: undefined,
+          status: 'available' as const,
+          inDraftPool: true,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+    }
+
+    // 4. Draft Object
     const newDraft: Draft = {
       id: newDraftId,
-      name: `BPL Draft ${new Date().toLocaleDateString()}`,
-      season: 'Season-2 (2026)',
+      name: params.name,
+      season: params.season,
+      logoUrl: params.logoUrl || DEFAULT_BPL_LOGO,
+      slogan: params.slogan || "More Than a League It's a Family",
+      subSlogan: params.subSlogan || 'Fair Play • Transparent • Stronger Teams',
+      tagline: 'Play Together Win Together',
       status: 'setup',
+      defaultPlayerQuota: 11,
       settings: {
         animationSpeed: 'normal',
         soundEnabled: true,
@@ -416,22 +497,37 @@ export default function App() {
       updatedAt: now,
     };
 
-    // Default categories for new draft
-    const sample = createSampleDraftData();
-    const newCategories = sample.categories.map((c) => ({
-      ...c,
-      id: `cat-${now}-${c.order}`,
-      draftId: newDraftId,
-      createdAt: now,
-      updatedAt: now,
-    }));
-
+    // Save to local IndexedDB
     await db.saveDraft(newDraft);
-    await db.bulkSaveCategories(newCategories);
+    if (newCategories.length > 0) await db.bulkSaveCategories(newCategories);
+    if (newTeams.length > 0) await db.bulkSaveTeams(newTeams);
+    if (newPlayers.length > 0) await db.bulkSavePlayers(newPlayers);
 
+    // Persist in localStorage for instant preloader and website branding sync
+    localStorage.setItem('bpl_last_draft_id', newDraftId);
+    localStorage.setItem('bpl_active_draft_id', newDraftId);
+    localStorage.setItem('bpl_active_tournament_logo', newDraft.logoUrl || DEFAULT_BPL_LOGO);
+    localStorage.setItem('bpl_active_tournament_name', newDraft.name);
+    localStorage.setItem('bpl_active_tournament_season', newDraft.season);
+
+    // Sync to Firebase Cloud if logged in
+    const actorId = currentUser?.id || 'superadmin-arif';
+    Promise.all([
+      firebaseDb.saveDraft(newDraft, actorId),
+      newCategories.length > 0 ? firebaseDb.saveCategories(newCategories, actorId) : Promise.resolve(),
+      newTeams.length > 0 ? firebaseDb.saveTeams(newTeams, actorId) : Promise.resolve(),
+      newPlayers.length > 0 ? firebaseDb.savePlayers(newPlayers, actorId) : Promise.resolve(),
+    ]).catch((err) => console.warn('Firebase draft creation sync warning:', err));
+
+    // Update React State immediately
     setDrafts((prev) => [newDraft, ...prev]);
-    await switchDraft(newDraftId);
-    setCurrentView('setup');
+    setActiveDraftId(newDraftId);
+    setCategories(newCategories);
+    setTeams(newTeams);
+    setPlayers(newPlayers);
+    setPicks([]);
+
+    setCurrentView('dashboard');
   };
 
   // Reload Sample BPL Season-2 dataset
@@ -639,6 +735,13 @@ export default function App() {
   const handleSaveDraft = async (updatedDraft: Draft) => {
     await db.saveDraft(updatedDraft);
     setDrafts((prev) => prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)));
+
+    if (updatedDraft.id === activeDraftId) {
+      localStorage.setItem('bpl_active_tournament_logo', updatedDraft.logoUrl || DEFAULT_BPL_LOGO);
+      localStorage.setItem('bpl_active_tournament_name', updatedDraft.name);
+      localStorage.setItem('bpl_active_tournament_season', updatedDraft.season || 'Season-2');
+    }
+
     const actorId = currentUser?.id || 'superadmin-arif';
     firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => {
       console.warn('Background cloud draft sync note:', err);
@@ -750,12 +853,49 @@ export default function App() {
   };
 
   if (isLoading && drafts.length === 0) {
+    const preloaderLogo =
+      activeDraft?.logoUrl ||
+      localStorage.getItem('bpl_active_tournament_logo') ||
+      DEFAULT_BPL_LOGO;
+    const preloaderSeason =
+      activeDraft?.season ||
+      localStorage.getItem('bpl_active_tournament_season') ||
+      'Season-2';
+    const preloaderName =
+      activeDraft?.name ||
+      localStorage.getItem('bpl_active_tournament_name') ||
+      'Brothers Premier League';
+
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#061A36] text-white space-y-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[#1283E6]" />
-        <div className="text-center">
-          <h2 className="text-lg font-bold tracking-tight">Brothers Premier League Season-2</h2>
-          <p className="text-xs text-slate-400 mt-1">Initializing IndexedDB Player Lottery Engine...</p>
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#061A36] text-white p-6 select-none">
+        {/* Logo Container with Glowing Aura */}
+        <div className="relative mb-6">
+          <div className="absolute -inset-3 rounded-3xl bg-gradient-to-tr from-[#1283E6] via-[#FF7A2E] to-[#F59F00] opacity-40 blur-xl animate-pulse" />
+          <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-b from-[#0A244A] to-[#041226] border-2 border-slate-700/80 p-2 shadow-2xl flex items-center justify-center overflow-hidden">
+            <img
+              src={preloaderLogo}
+              alt="Tournament Logo"
+              className="w-full h-full object-contain filter drop-shadow-md animate-pulse"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
+
+        {/* Loading Spinner & Season Badge */}
+        <div className="flex items-center gap-2.5 mb-2">
+          <Loader2 className="w-5 h-5 animate-spin text-[#1283E6]" />
+          <span className="text-xs font-black text-[#FF7A2E] uppercase tracking-widest">
+            {preloaderSeason}
+          </span>
+        </div>
+
+        <div className="text-center space-y-1">
+          <h2 className="text-xl sm:text-2xl font-black tracking-wider uppercase text-white drop-shadow-sm">
+            {preloaderName}
+          </h2>
+          <p className="text-xs text-slate-400 font-medium">
+            Initializing IndexedDB Player Lottery Engine...
+          </p>
         </div>
       </div>
     );
@@ -830,7 +970,7 @@ export default function App() {
               onOpenSuperadminPortal={() => setIsSuperadminPortalOpen(true)}
               onSyncToCloud={handleSyncToCloud}
               onSelectDraft={(id) => switchDraft(id)}
-              onCreateNewDraft={handleCreateNewDraft}
+              onCreateNewDraft={handleOpenCreateDraftModal}
               onLoadSampleData={handleLoadSampleData}
               onImportBackup={handleTriggerImportBackup}
               onExportDraft={handleExportBackup}
@@ -1097,6 +1237,13 @@ export default function App() {
         currentUser={currentUser}
         onUserChange={(user) => setCurrentUser(user)}
         onOpenSuperadminPortal={() => setIsSuperadminPortalOpen(true)}
+      />
+
+      {/* Create New Tournament Draft Modal */}
+      <CreateDraftModal
+        isOpen={isCreateDraftModalOpen}
+        onClose={() => setIsCreateDraftModalOpen(false)}
+        onCreateDraft={handleCreateDraftConfirmed}
       />
     </div>
   );

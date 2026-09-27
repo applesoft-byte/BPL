@@ -22,6 +22,7 @@ import {
 import { Category, Player, PlayerBadge, Team, AppUser } from '../types';
 import { CsvImportModal } from './CsvImportModal';
 import { DraftPoolModal } from './DraftPoolModal';
+import { ImportDefaultPlayersModal } from './ImportDefaultPlayersModal';
 import { fileToDataUrl } from '../lib/imageUtils';
 import { PhotoZoomModal } from './PhotoZoomModal';
 import { sanitizePlayerBangla } from '../lib/cleanUtils';
@@ -74,6 +75,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
   // CSV & Pool Modal State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isPoolModalOpen, setIsPoolModalOpen] = useState(false);
+  const [isDefaultPlayersModalOpen, setIsDefaultPlayersModalOpen] = useState(false);
 
   // Count in draft pool
   const poolCount = useMemo(() => {
@@ -289,10 +291,20 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Import Default Players Button */}
+          <button
+            onClick={() => setIsDefaultPlayersModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            title="Import players from default BPL 60-player registry"
+          >
+            <Users className="w-3.5 h-3.5 text-amber-300" />
+            <span>Import Default Players</span>
+          </button>
+
           {/* Draft Selection Pool Button */}
           <button
             onClick={() => setIsPoolModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
             title="Choose which players enter the draft lottery wheel"
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -852,6 +864,22 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
           categories={categories}
           teams={teams}
           onUpdateDraftPool={handleUpdateDraftPool}
+        />
+      )}
+
+      {/* Import from Default Player Registry Modal */}
+      {isDefaultPlayersModalOpen && (
+        <ImportDefaultPlayersModal
+          isOpen={isDefaultPlayersModalOpen}
+          onClose={() => setIsDefaultPlayersModalOpen(false)}
+          activeDraftId={activeDraftId}
+          currentPlayers={players}
+          categories={categories}
+          onImportPlayers={async (importedPlayers: Player[]) => {
+            await onBulkSavePlayers(importedPlayers);
+            showToast(`Successfully imported ${importedPlayers.length} players from official registry!`);
+            setIsDefaultPlayersModalOpen(false);
+          }}
         />
       )}
 

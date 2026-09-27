@@ -13,8 +13,58 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-[#F8FAFC] text-[#1F2937] font-['Poppins',sans-serif] antialiased selection:bg-[#1283E6] selection:text-white">
-    <div id="root"></div>
+  <body class="bg-[#061A36] text-[#1F2937] font-['Poppins',sans-serif] antialiased selection:bg-[#1283E6] selection:text-white">
+    <div id="root">
+      <div style="height:100vh;width:100vw;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#061A36;color:#ffffff;font-family:'Poppins',sans-serif;padding:24px;box-sizing:border-box;user-select:none;">
+        <div style="position:relative;margin-bottom:24px;">
+          <div style="width:100px;height:100px;border-radius:18px;background:linear-gradient(180deg,#0A244A 0%,#041226 100%);border:2px solid rgba(148,163,184,0.3);padding:8px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <img id="bpl-preload-logo" src="" alt="Tournament Logo" style="display:none;width:100%;height:100%;object-fit:contain;" />
+            <svg id="bpl-preload-svg" viewBox="0 0 240 240" fill="none" style="width:100%;height:100%;">
+              <circle cx="120" cy="120" r="100" fill="#0A244A" stroke="#FFD43B" stroke-width="6"/>
+              <path d="M120 30 L195 65 L195 155 L120 215 L45 155 L45 65 Z" fill="#061A36" stroke="#FFA94D" stroke-width="4"/>
+              <text x="120" y="115" text-anchor="middle" fill="#FFFFFF" font-family="'Poppins',sans-serif" font-weight="900" font-size="34" letter-spacing="2">BPL</text>
+              <text x="120" y="145" text-anchor="middle" fill="#FF922B" font-family="'Poppins',sans-serif" font-weight="700" font-size="14" letter-spacing="3">SEASON-2</text>
+              <circle cx="120" cy="175" r="7" fill="#E03131" stroke="#FFFFFF" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:20px;height:20px;border:2.5px solid rgba(18,131,230,0.25);border-top-color:#1283E6;border-radius:50%;animation:bplSpin 0.8s linear infinite;"></div>
+          <span id="bpl-preload-season" style="font-size:12px;font-weight:800;color:#FF7A2E;text-transform:uppercase;letter-spacing:2px;">SEASON-2</span>
+        </div>
+        <div style="text-align:center;">
+          <h2 id="bpl-preload-name" style="font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin:0;color:#ffffff;">Brothers Premier League</h2>
+          <p style="font-size:12px;color:#94A3B8;margin:6px 0 0 0;font-weight:500;">Initializing Player Lottery Engine...</p>
+        </div>
+        <script>
+          try {
+            var savedLogo = localStorage.getItem('bpl_active_tournament_logo');
+            var savedName = localStorage.getItem('bpl_active_tournament_name');
+            var savedSeason = localStorage.getItem('bpl_active_tournament_season');
+            if (savedLogo) {
+              var imgEl = document.getElementById('bpl-preload-logo');
+              var svgEl = document.getElementById('bpl-preload-svg');
+              if (imgEl && svgEl) {
+                imgEl.src = savedLogo;
+                imgEl.style.display = 'block';
+                svgEl.style.display = 'none';
+              }
+            }
+            if (savedName) {
+              var nameEl = document.getElementById('bpl-preload-name');
+              if (nameEl) nameEl.textContent = savedName;
+            }
+            if (savedSeason) {
+              var seasonEl = document.getElementById('bpl-preload-season');
+              if (seasonEl) seasonEl.textContent = savedSeason;
+            }
+          } catch (e) {}
+        </script>
+        <style>
+          @keyframes bplSpin { to { transform: rotate(360deg); } }
+        </style>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
