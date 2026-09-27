@@ -77,6 +77,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     authService.isSuperadmin(currentUser?.mobile || '') ||
     authService.isSuperadmin(currentUser?.email || '');
 
+  const isOfficialDraft = (id: string | null | undefined) =>
+    id === 'bpl-season-2-official' || id === 'bpl-s2-main';
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Hero Welcome Banner */}
@@ -302,11 +305,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               BPL
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base font-bold text-[#061A36]">{activeDraft.name}</h3>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#1283E6] border border-blue-200">
                   Active
                 </span>
+                {isOfficialDraft(activeDraft.id) ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                    🌐 Official League
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                    👤 Personal Draft (Local Only)
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
                 {activeDraft.season} • {teams.length} Teams • {players.length} Total Players Registered
@@ -395,11 +407,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="truncate">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {isOfficialDraft(d.id) ? (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                              🌐 Official League
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                              👤 Personal Draft
+                            </span>
+                          )}
+                        </div>
                         <h4 className="font-bold text-sm text-[#061A36] truncate">{d.name}</h4>
                         <span className="text-xs text-slate-500">{d.season}</span>
                       </div>
                       <span
-                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ${
                           d.status === 'completed'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : d.status === 'live'

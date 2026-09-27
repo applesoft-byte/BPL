@@ -26,6 +26,12 @@ import { authService } from './lib/authService';
 import { sanitizePlayerBangla } from './lib/cleanUtils';
 import { DEFAULT_BPL_LOGO } from './lib/imageUtils';
 
+export const OFFICIAL_DRAFT_IDS = ['bpl-season-2-official', 'bpl-s2-main'];
+export const isOfficialDraft = (id: string | null | undefined): boolean => {
+  if (!id) return false;
+  return OFFICIAL_DRAFT_IDS.includes(id);
+};
+
 export default function App() {
   // Navigation View State
   const [currentView, setCurrentView] = useState<NavView>('dashboard');
@@ -40,6 +46,18 @@ export default function App() {
 
   // Mobile + Ref Number Auth & Cloud Sync State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => authService.getCurrentUser());
+
+  // Determine if active user is Superadmin (Arif Iquebal)
+  // ONLY Superadmin changes can sync to Firebase Cloud to update the whole website!
+  const isSuperadmin = useMemo(() => {
+    if (!currentUser) return false;
+    return (
+      currentUser.role === 'superadmin' ||
+      authService.isSuperadmin(currentUser.mobile || '') ||
+      authService.isSuperadmin(currentUser.email || '')
+    );
+  }, [currentUser]);
+
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
   const [isSyncingToCloud, setIsSyncingToCloud] = useState<boolean>(false);
 
@@ -162,7 +180,10 @@ export default function App() {
       if (allDrafts.length > 0) {
         setDrafts(allDrafts);
         const lastOpened = localStorage.getItem('bpl_last_draft_id');
-        const selected = allDrafts.find((d) => d.id === lastOpened) || allDrafts[0];
+        const selected =
+          allDrafts.find((d) => d.id === lastOpened) ||
+          allDrafts.find((d) => isOfficialDraft(d.id)) ||
+          allDrafts[0];
         setActiveDraftId(selected.id);
 
         const [dbPlayers, dbTeams, dbCats, dbPicks] = await Promise.all([
@@ -197,14 +218,16 @@ export default function App() {
         setPicks(sample.picks);
         setIsLoading(false); // <--- UNBLOCK UI IMMEDIATELY!
 
-        // Background seed cloud
-        Promise.all([
-          firebaseDb.saveDraft(sample.draft, 'superadmin-arif'),
-          firebaseDb.saveCategories(sample.categories, 'superadmin-arif'),
-          firebaseDb.saveTeams(sample.teams, 'superadmin-arif'),
-          firebaseDb.savePlayers(sample.players, 'superadmin-arif'),
-          ...sample.picks.map((pk) => firebaseDb.savePick(pk, 'superadmin-arif')),
-        ]).catch(() => {});
+        // Background seed cloud ONLY if Superadmin
+        if (isSuperadmin) {
+          Promise.all([
+            firebaseDb.saveDraft(sample.draft, 'superadmin-arif'),
+            firebaseDb.saveCategories(sample.categories, 'superadmin-arif'),
+            firebaseDb.saveTeams(sample.teams, 'superadmin-arif'),
+            firebaseDb.savePlayers(sample.players, 'superadmin-arif'),
+            ...sample.picks.map((pk) => firebaseDb.savePick(pk, 'superadmin-arif')),
+          ]).catch(() => {});
+        }
       }
 
       // --- PHASE 2: NON-BLOCKING ASYNC CLOUD REVALIDATION ---
@@ -213,7 +236,7 @@ export default function App() {
           const cloudDrafts = await firebaseDb.getAllDrafts();
           if (cloudDrafts && cloudDrafts.length > 0) {
             const selectedCloudDraft =
-              cloudDrafts.find((d) => d.id === 'bpl-season-2-official') || cloudDrafts[0];
+              cloudDrafts.find((d) => isOfficialDraft(d.id)) || cloudDrafts[0];
             const [cPlayers, cTeams, cCats, cPicks] = await Promise.all([
               firebaseDb.getPlayers(selectedCloudDraft.id),
               firebaseDb.getTeams(selectedCloudDraft.id),
@@ -222,14 +245,16 @@ export default function App() {
             ]);
 
             if (cPlayers && cPlayers.length >= 20) {
-              setDrafts(cloudDrafts);
-              setActiveDraftId(selectedCloudDraft.id);
-              setCategories(cCats);
-              setTeams(cTeams);
-              setPlayers(cPlayers);
-              setPicks(cPicks);
+              const localDrafts = await db.getAllDrafts();
+              const merged = [...cloudDrafts];
+              for (const ld of localDrafts) {
+                if (!merged.some((cd) => cd.id === ld.id)) {
+                  merged.push(ld);
+                }
+              }
+              setDrafts(merged);
 
-              // Persist locally in background
+              // Persist official cloud tournament locally in background
               Promise.all([
                 db.saveDraft(selectedCloudDraft),
                 db.bulkSaveCategories(cCats),
@@ -237,6 +262,17 @@ export default function App() {
                 db.bulkSavePlayers(cPlayers),
                 db.bulkSavePicks(cPicks),
               ]).catch(() => {});
+
+              // Only update active draft if user was viewing official draft or has no custom draft open
+              const lastOpened = localStorage.getItem('bpl_last_draft_id');
+              const isCurrentlyOnOfficial = !lastOpened || isOfficialDraft(lastOpened);
+              if (isCurrentlyOnOfficial) {
+                setActiveDraftId(selectedCloudDraft.id);
+                setCategories(cCats);
+                setTeams(cTeams);
+                setPlayers(cPlayers);
+                setPicks(cPicks);
+              }
             }
           }
         } catch (cloudErr) {
@@ -247,15 +283,17 @@ export default function App() {
       console.error('Failed to initialize database:', err);
       setIsLoading(false);
     }
-  }, []);
+  }, [isSuperadmin]);
 
   useEffect(() => {
     loadDatabase();
   }, [loadDatabase]);
 
-  // Real-time Firestore subscriptions: ANY change by Superadmin propagates instantly to the whole website!
+  // Real-time Firestore subscriptions: ONLY for official cloud tournament!
+  // Any change by Superadmin propagates instantly to the whole website.
+  // Guest user created drafts are private and will NEVER subscribe to Firestore!
   useEffect(() => {
-    if (!activeDraftId) return;
+    if (!activeDraftId || !isOfficialDraft(activeDraftId)) return;
 
     let unsubDraft: (() => void) | undefined;
     let unsubTeams: (() => void) | undefined;
@@ -580,14 +618,17 @@ export default function App() {
     localStorage.setItem('bpl_active_tournament_name', newDraft.name);
     localStorage.setItem('bpl_active_tournament_season', newDraft.season);
 
-    // Sync to Firebase Cloud if logged in
-    const actorId = currentUser?.id || 'superadmin-arif';
-    Promise.all([
-      firebaseDb.saveDraft(newDraft, actorId),
-      newCategories.length > 0 ? firebaseDb.saveCategories(newCategories, actorId) : Promise.resolve(),
-      newTeams.length > 0 ? firebaseDb.saveTeams(newTeams, actorId) : Promise.resolve(),
-      newPlayers.length > 0 ? firebaseDb.savePlayers(newPlayers, actorId) : Promise.resolve(),
-    ]).catch((err) => console.warn('Firebase draft creation sync warning:', err));
+    // Sync to Firebase Cloud ONLY if Superadmin
+    // Guest user created drafts are strictly local and will never alter the whole website
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
+      Promise.all([
+        firebaseDb.saveDraft(newDraft, actorId),
+        newCategories.length > 0 ? firebaseDb.saveCategories(newCategories, actorId) : Promise.resolve(),
+        newTeams.length > 0 ? firebaseDb.saveTeams(newTeams, actorId) : Promise.resolve(),
+        newPlayers.length > 0 ? firebaseDb.savePlayers(newPlayers, actorId) : Promise.resolve(),
+      ]).catch((err) => console.warn('Firebase draft creation sync warning:', err));
+    }
 
     // Update React State immediately
     setDrafts((prev) => [newDraft, ...prev]);
@@ -609,6 +650,16 @@ export default function App() {
       await db.bulkSaveTeams(sample.teams);
       await db.bulkSavePlayers(sample.players);
       await db.bulkSavePicks(sample.picks);
+
+      if (isSuperadmin) {
+        await Promise.all([
+          firebaseDb.saveDraft(sample.draft, 'superadmin-arif'),
+          firebaseDb.saveCategories(sample.categories, 'superadmin-arif'),
+          firebaseDb.saveTeams(sample.teams, 'superadmin-arif'),
+          firebaseDb.savePlayers(sample.players, 'superadmin-arif'),
+          ...sample.picks.map((pk) => firebaseDb.savePick(pk, 'superadmin-arif')),
+        ]).catch(() => {});
+      }
 
       await loadDatabase();
       await switchDraft(sample.draft.id);
@@ -633,13 +684,14 @@ export default function App() {
     setPlayers(sample.players);
     setPicks(sample.picks);
 
-    if (currentUser) {
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
       await Promise.all([
-        firebaseDb.saveDraft(sample.draft, currentUser.id),
-        firebaseDb.saveCategories(sample.categories, currentUser.id),
-        firebaseDb.saveTeams(sample.teams, currentUser.id),
-        firebaseDb.savePlayers(sample.players, currentUser.id),
-        ...sample.picks.map((pk) => firebaseDb.savePick(pk, currentUser.id)),
+        firebaseDb.saveDraft(sample.draft, actorId),
+        firebaseDb.saveCategories(sample.categories, actorId),
+        firebaseDb.saveTeams(sample.teams, actorId),
+        firebaseDb.savePlayers(sample.players, actorId),
+        ...sample.picks.map((pk) => firebaseDb.savePick(pk, actorId)),
       ]).catch((err) => console.warn('Firebase sync error on reset:', err));
     }
   };
@@ -675,15 +727,40 @@ export default function App() {
     await db.bulkSaveTeams(newTeams);
     await db.bulkSavePlayers(newPlayers);
 
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
+      Promise.all([
+        firebaseDb.saveDraft(newDraft, actorId),
+        firebaseDb.saveCategories(newCats, actorId),
+        firebaseDb.saveTeams(newTeams, actorId),
+        firebaseDb.savePlayers(newPlayers, actorId),
+      ]).catch(() => {});
+    }
+
     await loadDatabase();
     await switchDraft(newDraftId);
   };
 
   // Delete Draft
   const handleDeleteDraft = async (draftId: string) => {
+    if (isOfficialDraft(draftId) && !isSuperadmin) {
+      alert('The official BPL Season-2 tournament cannot be deleted by guest users.');
+      return;
+    }
     if (confirm('Are you sure you want to permanently delete this tournament draft?')) {
       await db.deleteDraft(draftId);
-      await loadDatabase();
+      if (isSuperadmin) {
+        firebaseDb.deleteDraft(draftId).catch(() => {});
+      }
+      if (activeDraftId === draftId) {
+        localStorage.removeItem('bpl_last_draft_id');
+        localStorage.removeItem('bpl_active_tournament_logo');
+        localStorage.removeItem('bpl_active_tournament_name');
+        localStorage.removeItem('bpl_active_tournament_season');
+        await switchDraft('bpl-season-2-official');
+      } else {
+        await loadDatabase();
+      }
     }
   };
 
@@ -717,29 +794,41 @@ export default function App() {
     await db.savePick(pickRecord);
     await db.savePlayer(updatedPlayer);
 
-    // Sync to Cloud Firebase Firestore immediately so all devices update in real-time
-    const actorId = currentUser?.id || 'superadmin-arif';
-    Promise.all([
-      firebaseDb.savePick(pickRecord, actorId),
-      firebaseDb.saveSinglePlayer(updatedPlayer, actorId),
-    ]).catch((err) => console.warn('Firebase pick sync error:', err));
+    // Sync to Cloud Firebase Firestore immediately ONLY if Superadmin
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
+      Promise.all([
+        firebaseDb.savePick(pickRecord, actorId),
+        firebaseDb.saveSinglePlayer(updatedPlayer, actorId),
+      ]).catch((err) => console.warn('Firebase pick sync error:', err));
+
+      if (activeDraft.status !== 'live') {
+        const updatedDraft: Draft = {
+          ...activeDraft,
+          status: 'live',
+          startedAt: activeDraft.startedAt || now,
+          updatedAt: now,
+        };
+        await db.saveDraft(updatedDraft);
+        firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => console.warn(err));
+        setDrafts((prev) => prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)));
+      }
+    } else {
+      if (activeDraft.status !== 'live') {
+        const updatedDraft: Draft = {
+          ...activeDraft,
+          status: 'live',
+          startedAt: activeDraft.startedAt || now,
+          updatedAt: now,
+        };
+        await db.saveDraft(updatedDraft);
+        setDrafts((prev) => prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)));
+      }
+    }
 
     // Update state
     setPicks((prev) => [...prev, pickRecord]);
     setPlayers((prev) => prev.map((p) => (p.id === player.id ? updatedPlayer : p)));
-
-    // Update draft status to live if not already
-    if (activeDraft.status !== 'live') {
-      const updatedDraft: Draft = {
-        ...activeDraft,
-        status: 'live',
-        startedAt: activeDraft.startedAt || now,
-        updatedAt: now,
-      };
-      await db.saveDraft(updatedDraft);
-      firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => console.warn(err));
-      setDrafts((prev) => prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)));
-    }
   };
 
   // Undo Latest Pick (Section 25)
@@ -762,11 +851,13 @@ export default function App() {
     }
 
     await db.deletePick(latestPick.id);
-    const actorId = currentUser?.id || 'superadmin-arif';
-    Promise.all([
-      firebaseDb.deletePick(latestPick.id),
-      restoredPlayer ? firebaseDb.saveSinglePlayer(restoredPlayer, actorId) : Promise.resolve(),
-    ]).catch((err) => console.warn('Firebase undo sync error:', err));
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
+      Promise.all([
+        firebaseDb.deletePick(latestPick.id),
+        restoredPlayer ? firebaseDb.saveSinglePlayer(restoredPlayer, actorId) : Promise.resolve(),
+      ]).catch((err) => console.warn('Firebase undo sync error:', err));
+    }
 
     setPicks((prev) => prev.slice(0, -1));
   };
@@ -781,8 +872,10 @@ export default function App() {
       updatedAt: Date.now(),
     };
     await db.saveDraft(updatedDraft);
-    const actorId = currentUser?.id || 'superadmin-arif';
-    firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => console.warn(err));
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
+      firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => console.warn(err));
+    }
     setDrafts((prev) => prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)));
   };
 
@@ -796,8 +889,10 @@ export default function App() {
       updatedAt: Date.now(),
     };
     await db.saveDraft(updatedDraft);
-    const actorId = currentUser?.id || 'superadmin-arif';
-    firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => console.warn(err));
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
+      firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => console.warn(err));
+    }
     setDrafts((prev) => prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)));
   };
 
@@ -812,26 +907,34 @@ export default function App() {
       localStorage.setItem('bpl_active_tournament_season', updatedDraft.season || 'Season-2');
     }
 
-    const actorId = currentUser?.id || 'superadmin-arif';
-    firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => {
-      console.warn('Background cloud draft sync note:', err);
-    });
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
+      firebaseDb.saveDraft(updatedDraft, actorId).catch((err) => {
+        console.warn('Background cloud draft sync note:', err);
+      });
+    }
   };
 
   // Bulk Save Players
   const handleBulkSavePlayers = async (updatedPlayers: Player[]) => {
     await db.bulkSavePlayers(updatedPlayers);
     setPlayers(updatedPlayers);
-    const actorId = currentUser?.id || 'superadmin-arif';
-    firebaseDb.savePlayers(updatedPlayers, actorId).catch((err) => {
-      console.warn('Background cloud players sync note:', err);
-    });
+    if (isSuperadmin) {
+      const actorId = currentUser?.id || 'superadmin-arif';
+      firebaseDb.savePlayers(updatedPlayers, actorId).catch((err) => {
+        console.warn('Background cloud players sync note:', err);
+      });
+    }
   };
 
   // Sync full local dataset to Firebase Firestore Cloud
   const handleSyncToCloud = async () => {
     if (!currentUser) {
       setIsAuthModalOpen(true);
+      return;
+    }
+    if (!isSuperadmin) {
+      alert('Only Superadmin Arif Iquebal can publish official data to the global cloud database.');
       return;
     }
     if (!activeDraft) return;

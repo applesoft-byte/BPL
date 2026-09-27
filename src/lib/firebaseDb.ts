@@ -103,8 +103,25 @@ export const firebaseDb = {
       const snap = await getDocs(collection(db, 'drafts'));
       const list: Draft[] = [];
       snap.forEach((d) => {
-        list.push(d.data() as Draft);
+        const data = d.data() as Draft;
+        const isOfficial = data.id === 'bpl-season-2-official' || data.id === 'bpl-s2-main';
+        const isSuperadminOwner =
+          data.ownerId === 'superadmin' ||
+          data.ownerId === 'superadmin-arif' ||
+          data.ownerId?.startsWith('usr-superadmin');
+        if (isOfficial || isSuperadminOwner) {
+          list.push(data);
+        }
       });
+      // Fallback if list is empty but snap had documents
+      if (list.length === 0 && !snap.empty) {
+        snap.forEach((d) => {
+          const data = d.data() as Draft;
+          if (data.id === 'bpl-season-2-official' || data.id === 'bpl-s2-main') {
+            list.push(data);
+          }
+        });
+      }
       return list;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, path);

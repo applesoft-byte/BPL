@@ -17,6 +17,7 @@ import { fileToDataUrl, DEFAULT_BPL_LOGO } from '../lib/imageUtils';
 interface CreateDraftModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isSuperadmin?: boolean;
   onCreateDraft: (params: {
     name: string;
     season: string;
@@ -32,6 +33,7 @@ interface CreateDraftModalProps {
 export const CreateDraftModal: React.FC<CreateDraftModalProps> = ({
   isOpen,
   onClose,
+  isSuperadmin = false,
   onCreateDraft,
 }) => {
   const [name, setName] = useState('Brothers Premier League (BPL)');
@@ -118,6 +120,23 @@ export const CreateDraftModal: React.FC<CreateDraftModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+          {/* User Workspace Info Banner */}
+          {!isSuperadmin ? (
+            <div className="p-3 bg-blue-50/90 border border-blue-200/80 rounded-xl flex items-start gap-2.5 text-xs text-blue-900 shadow-2xs">
+              <Shield className="w-4 h-4 text-[#1283E6] mt-0.5 shrink-0" />
+              <div className="leading-relaxed">
+                <span className="font-bold text-[#061A36]">Personal User Workspace:</span> This draft will be created and saved privately in your personal browser session. It will only be visible to you and will <span className="font-bold text-blue-800">never modify the official BPL Season-2 website</span> for any other users.
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-amber-50/90 border border-amber-200/80 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 shadow-2xs">
+              <Sparkles className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <div className="leading-relaxed">
+                <span className="font-bold text-amber-950">Superadmin Cloud League Mode:</span> You are logged in as Superadmin Arif Iquebal. This draft tournament will be synced to the global Firebase Cloud and published to the entire website.
+              </div>
+            </div>
+          )}
+
           {/* Tournament Logo Section */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">

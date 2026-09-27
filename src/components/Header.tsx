@@ -103,15 +103,26 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Side Controls */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Live Real-time Cloud Sync Beacon */}
-          <div
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700"
-            title="Real-time Firestore Database Connected: Any changes by Superadmin update the whole website instantly"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="hidden xl:inline">Live Cloud Sync</span>
-            <span className="xl:hidden">Live</span>
-          </div>
+          {/* Live Real-time Cloud Sync Beacon or Personal Local Badge */}
+          {draft?.id && (draft.id === 'bpl-season-2-official' || draft.id === 'bpl-s2-main') ? (
+            <div
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700"
+              title="Real-time Firestore Database Connected: Official BPL Tournament (Superadmin changes sync to the whole website)"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="hidden xl:inline">Official League Sync</span>
+              <span className="xl:hidden">Official</span>
+            </div>
+          ) : (
+            <div
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-[10px] font-bold text-purple-700"
+              title="Personal Draft: Changes are isolated to your browser and will never alter the official BPL website for other visitors."
+            >
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span className="hidden xl:inline">Personal Workspace</span>
+              <span className="xl:hidden">Personal</span>
+            </div>
+          )}
 
           {/* Quick Superadmin Button if logged in */}
           {isSuperadmin && onOpenSuperadminPortal && (
