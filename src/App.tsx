@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { db } from './lib/db';
 import { soundManager } from './lib/sound';
 import { createSampleDraftData } from './lib/sampleData';
@@ -77,6 +77,70 @@ export default function App() {
     localStorage.setItem('bpl_sound_enabled', String(soundEnabled));
   }, [soundEnabled]);
 
+  // Force manual scroll restoration so browsers/iframes do not retain or restore previous scroll
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  // Universal instant scroll to top across window, html, body, root, and main
+  const resetScrollPosition = useCallback(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.scrollingElement) {
+      document.scrollingElement.scrollTop = 0;
+      document.scrollingElement.scrollLeft = 0;
+    }
+    document.documentElement.scrollTop = 0;
+    document.documentElement.scrollLeft = 0;
+    document.body.scrollTop = 0;
+    document.body.scrollLeft = 0;
+    const rootEl = document.getElementById('root');
+    if (rootEl) {
+      rootEl.scrollTop = 0;
+      rootEl.scrollLeft = 0;
+    }
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTop = 0;
+      mainEl.scrollLeft = 0;
+    }
+  }, []);
+
+  // Synchronous Layout Effect: Runs before the browser paints the new view
+  useLayoutEffect(() => {
+    resetScrollPosition();
+
+    // 1st animation frame
+    const raf1 = requestAnimationFrame(() => {
+      resetScrollPosition();
+    });
+
+    // 2nd animation frame (after full DOM reconciliation and repaint)
+    const raf2 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resetScrollPosition();
+      });
+    });
+
+    // Fallback timer for any async image or font layout stabilization
+    const timer = setTimeout(() => {
+      resetScrollPosition();
+    }, 25);
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(timer);
+    };
+  }, [currentView, activeDraftId, resetScrollPosition]);
+
+  // Unified fast navigation handler
+  const navigateToView = useCallback((view: NavView) => {
+    resetScrollPosition();
+    setCurrentView(view);
+  }, [resetScrollPosition]);
+
   // Sync sidebar collapse to localStorage
   const handleToggleSidebar = () => {
     setSidebarCollapsed((prev) => {
@@ -86,80 +150,17 @@ export default function App() {
     });
   };
 
-  // 1. Initial Load from IndexedDB & Cloud Firestore
+  // 1. Initial Load from IndexedDB (Instant Cache-First ~10ms) & Background Cloud Sync
   const loadDatabase = useCallback(async () => {
     try {
       setIsLoading(true);
       const officialSeedKey = 'bpl_seeded_v8_season2_final_roster_60';
 
-      // Check if Firestore Cloud already has drafts & players
-      let cloudLoaded = false;
-      try {
-        const cloudDrafts = await firebaseDb.getAllDrafts();
-        if (cloudDrafts && cloudDrafts.length > 0) {
-          const selectedCloudDraft = cloudDrafts.find((d) => d.id === 'bpl-season-2-official') || cloudDrafts[0];
-          const [cPlayers, cTeams, cCats, cPicks] = await Promise.all([
-            firebaseDb.getPlayers(selectedCloudDraft.id),
-            firebaseDb.getTeams(selectedCloudDraft.id),
-            firebaseDb.getCategories(selectedCloudDraft.id),
-            firebaseDb.getPicks(selectedCloudDraft.id),
-          ]);
-
-          if (cPlayers && cPlayers.length >= 20) {
-            cloudLoaded = true;
-            await db.saveDraft(selectedCloudDraft);
-            await db.bulkSaveCategories(cCats);
-            await db.bulkSaveTeams(cTeams);
-            await db.bulkSavePlayers(cPlayers);
-            await db.bulkSavePicks(cPicks);
-            localStorage.setItem(officialSeedKey, 'true');
-
-            setDrafts(cloudDrafts);
-            setActiveDraftId(selectedCloudDraft.id);
-            setCategories(cCats);
-            setTeams(cTeams);
-            setPlayers(cPlayers);
-            setPicks(cPicks);
-          }
-        }
-      } catch (cloudErr) {
-        console.warn('Initial cloud read note:', cloudErr);
-      }
-
-      if (cloudLoaded) {
-        return;
-      }
-
+      // --- PHASE 1: INSTANT LOCAL LOAD (IndexedDB ~5-15ms) ---
       const allDrafts = await db.getAllDrafts();
 
-      if (allDrafts.length === 0 || localStorage.getItem(officialSeedKey) !== 'true') {
-        // Initialize or update with official BPL Season-2 dataset matching tournament photo (10 English categories, 6 Official Teams & 60 Picks)
-        const sample = createSampleDraftData();
-        await db.saveDraft(sample.draft);
-        await db.bulkSaveCategories(sample.categories);
-        await db.bulkSaveTeams(sample.teams);
-        await db.bulkSavePlayers(sample.players);
-        await db.bulkSavePicks(sample.picks);
-        localStorage.setItem(officialSeedKey, 'true');
-
-        setDrafts([sample.draft]);
-        setActiveDraftId(sample.draft.id);
-        setCategories(sample.categories);
-        setTeams(sample.teams);
-        setPlayers(sample.players);
-        setPicks(sample.picks);
-
-        // Bootstrap cloud database so all remote users immediately see this data
-        Promise.all([
-          firebaseDb.saveDraft(sample.draft, 'superadmin-arif'),
-          firebaseDb.saveCategories(sample.categories, 'superadmin-arif'),
-          firebaseDb.saveTeams(sample.teams, 'superadmin-arif'),
-          firebaseDb.savePlayers(sample.players, 'superadmin-arif'),
-          ...sample.picks.map((pk) => firebaseDb.savePick(pk, 'superadmin-arif')),
-        ]).catch((err) => console.warn('Initial background cloud seed note:', err));
-      } else {
+      if (allDrafts.length > 0) {
         setDrafts(allDrafts);
-        // Find last opened draft or first draft
         const lastOpened = localStorage.getItem('bpl_last_draft_id');
         const selected = allDrafts.find((d) => d.id === lastOpened) || allDrafts[0];
         setActiveDraftId(selected.id);
@@ -171,95 +172,79 @@ export default function App() {
           db.getPicks(selected.id),
         ]);
 
-        // Remove old unregistered Ashik Mahmud if present in existing database so total roster is exactly 61 players
-        const filteredDbPlayers = dbPlayers.filter((p) => {
-          if (p.fullName === 'Ashik Mahmud') {
-            db.deletePlayer(p.id).catch((err) => console.warn(err));
-            return false;
-          }
-          return true;
-        });
-
-        // Keep captain flag and badge synced, without auto-marking unpicked players as drafted
-        let playersNeedingUpdate = false;
-        const updatedPlayersList = filteredDbPlayers.map((p) => {
-          const team = dbTeams.find(
-            (t) => t.captainPlayerId === p.id || (t.captainName && t.captainName.toLowerCase() === p.fullName.toLowerCase())
-          );
-          const hasPick = dbPicks.some((pk) => pk.playerId === p.id);
-          if (team && !p.isCaptain) {
-            playersNeedingUpdate = true;
-            return {
-              ...p,
-              isCaptain: true,
-              badge: 'CAPTAIN' as const,
-              updatedAt: Date.now(),
-            };
-          }
-          // If no pick exists for this player in database, ensure status is available
-          if (!hasPick && p.status === 'drafted') {
-            playersNeedingUpdate = true;
-            return {
-              ...p,
-              status: 'available' as const,
-              assignedTeamId: undefined,
-              assignedCategoryId: undefined,
-              updatedAt: Date.now(),
-            };
-          }
-          return p;
-        });
-
-        // Also check if any existing player has 'Emon (Crown)' or 'Raihan Emon' and rename to 'Rayhan Emon'
-        let emonRenamed = false;
-        let banglaCleaned = false;
-        const mappedPlayers = updatedPlayersList.map((p) => {
-          let updatedPlayer = p;
-          if (p.fullName === 'Emon (Crown)' || p.fullName === 'Raihan Emon') {
-            emonRenamed = true;
-            updatedPlayer = {
-              ...p,
-              fullName: 'Rayhan Emon',
-              battingStyle: 'Right Handed' as const,
-              bowlingStyle: 'Left Arm Spinner',
-              playerType: 'Right Handed • Left Arm Spinner',
-              notes: 'Batsman Level-01',
-              updatedAt: Date.now(),
-            };
-          }
-          // Remove any Bangla from notes or fullName
-          const sanitized = sanitizePlayerBangla(updatedPlayer);
-          if (sanitized.notes !== updatedPlayer.notes || sanitized.fullName !== updatedPlayer.fullName) {
-            banglaCleaned = true;
-            return {
-              ...sanitized,
-              updatedAt: Date.now(),
-            };
-          }
-          return updatedPlayer;
-        });
-
-        if (playersNeedingUpdate || emonRenamed || banglaCleaned || filteredDbPlayers.length !== dbPlayers.length) {
-          await db.bulkSavePlayers(mappedPlayers);
-          setPlayers(mappedPlayers);
-        } else {
-          setPlayers(mappedPlayers);
-        }
-
-        // Clean Bangla records from Firestore in background
-        if (activeDraft?.id) {
-          firebaseDb.cleanBanglaFromFirestore(activeDraft.id).catch((err) => {
-            console.warn('Firestore bangla cleanup non-fatal warning:', err);
-          });
-        }
-
+        setPlayers(dbPlayers);
         setTeams(dbTeams);
         setCategories(dbCats);
         setPicks(dbPicks);
+        setIsLoading(false); // <--- UNBLOCK UI IMMEDIATELY! NO WAITING FOR NETWORK!
+      } else {
+        // First-time visit: seed sample data directly in memory & local storage in 10ms!
+        const sample = createSampleDraftData();
+        await Promise.all([
+          db.saveDraft(sample.draft),
+          db.bulkSaveCategories(sample.categories),
+          db.bulkSaveTeams(sample.teams),
+          db.bulkSavePlayers(sample.players),
+          db.bulkSavePicks(sample.picks),
+        ]);
+        localStorage.setItem(officialSeedKey, 'true');
+
+        setDrafts([sample.draft]);
+        setActiveDraftId(sample.draft.id);
+        setCategories(sample.categories);
+        setTeams(sample.teams);
+        setPlayers(sample.players);
+        setPicks(sample.picks);
+        setIsLoading(false); // <--- UNBLOCK UI IMMEDIATELY!
+
+        // Background seed cloud
+        Promise.all([
+          firebaseDb.saveDraft(sample.draft, 'superadmin-arif'),
+          firebaseDb.saveCategories(sample.categories, 'superadmin-arif'),
+          firebaseDb.saveTeams(sample.teams, 'superadmin-arif'),
+          firebaseDb.savePlayers(sample.players, 'superadmin-arif'),
+          ...sample.picks.map((pk) => firebaseDb.savePick(pk, 'superadmin-arif')),
+        ]).catch(() => {});
       }
+
+      // --- PHASE 2: NON-BLOCKING ASYNC CLOUD REVALIDATION ---
+      setTimeout(async () => {
+        try {
+          const cloudDrafts = await firebaseDb.getAllDrafts();
+          if (cloudDrafts && cloudDrafts.length > 0) {
+            const selectedCloudDraft =
+              cloudDrafts.find((d) => d.id === 'bpl-season-2-official') || cloudDrafts[0];
+            const [cPlayers, cTeams, cCats, cPicks] = await Promise.all([
+              firebaseDb.getPlayers(selectedCloudDraft.id),
+              firebaseDb.getTeams(selectedCloudDraft.id),
+              firebaseDb.getCategories(selectedCloudDraft.id),
+              firebaseDb.getPicks(selectedCloudDraft.id),
+            ]);
+
+            if (cPlayers && cPlayers.length >= 20) {
+              setDrafts(cloudDrafts);
+              setActiveDraftId(selectedCloudDraft.id);
+              setCategories(cCats);
+              setTeams(cTeams);
+              setPlayers(cPlayers);
+              setPicks(cPicks);
+
+              // Persist locally in background
+              Promise.all([
+                db.saveDraft(selectedCloudDraft),
+                db.bulkSaveCategories(cCats),
+                db.bulkSaveTeams(cTeams),
+                db.bulkSavePlayers(cPlayers),
+                db.bulkSavePicks(cPicks),
+              ]).catch(() => {});
+            }
+          }
+        } catch (cloudErr) {
+          console.warn('Background cloud revalidation note:', cloudErr);
+        }
+      }, 50);
     } catch (err) {
       console.error('Failed to initialize database:', err);
-    } finally {
       setIsLoading(false);
     }
   }, []);
@@ -280,42 +265,127 @@ export default function App() {
 
     try {
       unsubDraft = firebaseDb.subscribeDraft(activeDraftId, (updatedDraft) => {
-        if (updatedDraft) {
-          setDrafts((prev) => {
-            const exists = prev.some((d) => d.id === updatedDraft.id);
-            return exists ? prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)) : [updatedDraft, ...prev];
-          });
-          db.saveDraft(updatedDraft).catch(() => {});
-        }
+        if (!updatedDraft) return;
+        setDrafts((prev) => {
+          const existing = prev.find((d) => d.id === updatedDraft.id);
+          if (
+            existing &&
+            existing.name === updatedDraft.name &&
+            existing.season === updatedDraft.season &&
+            existing.logoUrl === updatedDraft.logoUrl &&
+            existing.status === updatedDraft.status &&
+            existing.currentCategoryId === updatedDraft.currentCategoryId &&
+            existing.updatedAt === updatedDraft.updatedAt
+          ) {
+            return prev;
+          }
+          const exists = prev.some((d) => d.id === updatedDraft.id);
+          return exists ? prev.map((d) => (d.id === updatedDraft.id ? updatedDraft : d)) : [updatedDraft, ...prev];
+        });
+        db.saveDraft(updatedDraft).catch(() => {});
       });
 
       unsubTeams = firebaseDb.subscribeTeams(activeDraftId, (cloudTeams) => {
-        if (cloudTeams && cloudTeams.length > 0) {
-          setTeams(cloudTeams);
+        if (!cloudTeams || cloudTeams.length === 0) return;
+        setTeams((prev) => {
+          if (prev.length === cloudTeams.length) {
+            let isIdentical = true;
+            for (let i = 0; i < cloudTeams.length; i++) {
+              if (
+                prev[i]?.id !== cloudTeams[i]?.id ||
+                prev[i]?.captainPlayerId !== cloudTeams[i]?.captainPlayerId ||
+                prev[i]?.name !== cloudTeams[i]?.name ||
+                prev[i]?.primaryColor !== cloudTeams[i]?.primaryColor ||
+                prev[i]?.logoUrl !== cloudTeams[i]?.logoUrl ||
+                prev[i]?.maxPlayers !== cloudTeams[i]?.maxPlayers
+              ) {
+                isIdentical = false;
+                break;
+              }
+            }
+            if (isIdentical) return prev;
+          }
           db.bulkSaveTeams(cloudTeams).catch(() => {});
-        }
+          return cloudTeams;
+        });
       });
 
       unsubPlayers = firebaseDb.subscribePlayers(activeDraftId, (cloudPlayers) => {
-        if (cloudPlayers && cloudPlayers.length > 0) {
+        if (!cloudPlayers || cloudPlayers.length === 0) return;
+        setPlayers((prev) => {
+          if (prev.length === cloudPlayers.length) {
+            let isIdentical = true;
+            for (let i = 0; i < cloudPlayers.length; i++) {
+              const cp = cloudPlayers[i];
+              const pp = prev[i];
+              if (
+                !pp ||
+                pp.id !== cp.id ||
+                pp.status !== cp.status ||
+                pp.assignedTeamId !== cp.assignedTeamId ||
+                pp.assignedCategoryId !== cp.assignedCategoryId ||
+                pp.inDraftPool !== cp.inDraftPool ||
+                pp.fullName !== cp.fullName ||
+                pp.photoUrl !== cp.photoUrl ||
+                pp.updatedAt !== cp.updatedAt
+              ) {
+                isIdentical = false;
+                break;
+              }
+            }
+            if (isIdentical) return prev;
+          }
           const sanitizedCloudPlayers = cloudPlayers.map(sanitizePlayerBangla);
-          setPlayers(sanitizedCloudPlayers);
           db.bulkSavePlayers(sanitizedCloudPlayers).catch(() => {});
-        }
+          return sanitizedCloudPlayers;
+        });
       });
 
       unsubCategories = firebaseDb.subscribeCategories(activeDraftId, (cloudCats) => {
-        if (cloudCats && cloudCats.length > 0) {
-          setCategories(cloudCats);
+        if (!cloudCats || cloudCats.length === 0) return;
+        setCategories((prev) => {
+          if (prev.length === cloudCats.length) {
+            let isIdentical = true;
+            for (let i = 0; i < cloudCats.length; i++) {
+              if (
+                prev[i]?.id !== cloudCats[i]?.id ||
+                prev[i]?.name !== cloudCats[i]?.name ||
+                prev[i]?.order !== cloudCats[i]?.order ||
+                prev[i]?.color !== cloudCats[i]?.color ||
+                prev[i]?.active !== cloudCats[i]?.active
+              ) {
+                isIdentical = false;
+                break;
+              }
+            }
+            if (isIdentical) return prev;
+          }
           db.bulkSaveCategories(cloudCats).catch(() => {});
-        }
+          return cloudCats;
+        });
       });
 
       unsubPicks = firebaseDb.subscribePicks(activeDraftId, (cloudPicks) => {
-        if (cloudPicks) {
-          setPicks(cloudPicks);
+        if (!cloudPicks) return;
+        setPicks((prev) => {
+          if (prev.length === cloudPicks.length) {
+            let isIdentical = true;
+            for (let i = 0; i < cloudPicks.length; i++) {
+              if (
+                prev[i]?.id !== cloudPicks[i]?.id ||
+                prev[i]?.sequence !== cloudPicks[i]?.sequence ||
+                prev[i]?.playerId !== cloudPicks[i]?.playerId ||
+                prev[i]?.teamId !== cloudPicks[i]?.teamId
+              ) {
+                isIdentical = false;
+                break;
+              }
+            }
+            if (isIdentical) return prev;
+          }
           db.bulkSavePicks(cloudPicks).catch(() => {});
-        }
+          return cloudPicks;
+        });
       });
     } catch (err) {
       console.warn('Real-time subscription listener note:', err);
@@ -527,7 +597,7 @@ export default function App() {
     setPlayers(newPlayers);
     setPicks([]);
 
-    setCurrentView('dashboard');
+    navigateToView('dashboard');
   };
 
   // Reload Sample BPL Season-2 dataset
@@ -542,7 +612,7 @@ export default function App() {
 
       await loadDatabase();
       await switchDraft(sample.draft.id);
-      setCurrentView('results');
+      navigateToView('results');
     }
   };
 
@@ -849,7 +919,7 @@ export default function App() {
   const handleClearAllData = async () => {
     await db.clearAllData();
     await loadDatabase();
-    setCurrentView('dashboard');
+    navigateToView('dashboard');
   };
 
   if (isLoading && drafts.length === 0) {
@@ -915,7 +985,7 @@ export default function App() {
       {/* Navigation Sidebar */}
       <Sidebar
         currentView={currentView}
-        onSelectView={setCurrentView}
+        onSelectView={navigateToView}
         collapsed={sidebarCollapsed}
         onToggleCollapse={handleToggleSidebar}
         mobileOpen={mobileMenuOpen}
@@ -942,14 +1012,15 @@ export default function App() {
           onOpenSuperadminPortal={() => setIsSuperadminPortalOpen(true)}
           onToggleSound={() => setSoundEnabled((prev) => !prev)}
           onOpenMobileSidebar={() => setMobileMenuOpen(true)}
-          onNavigateToLive={() => setCurrentView('live')}
-          onNavigateToResults={() => setCurrentView('results')}
+          onNavigateToLive={() => navigateToView('live')}
+          onNavigateToResults={() => navigateToView('results')}
           onSaveDraft={handleSaveDraft}
           onOpenDraftPoolModal={() => setIsGlobalPoolModalOpen(true)}
         />
 
         {/* View Page Router */}
         <main
+          key={currentView}
           className={`flex-1 w-full mx-auto ${
             currentView === 'live'
               ? 'p-2 sm:p-3 md:p-4 max-w-[1600px]'
@@ -976,10 +1047,10 @@ export default function App() {
               onExportDraft={handleExportBackup}
               onDuplicateDraft={handleDuplicateDraft}
               onDeleteDraft={handleDeleteDraft}
-              onNavigateToLive={() => setCurrentView('live')}
-              onNavigateToResults={() => setCurrentView('results')}
-              onNavigateToPlayers={() => setCurrentView('players')}
-              onNavigateToTeams={() => setCurrentView('teams')}
+              onNavigateToLive={() => navigateToView('live')}
+              onNavigateToResults={() => navigateToView('results')}
+              onNavigateToPlayers={() => navigateToView('players')}
+              onNavigateToTeams={() => navigateToView('teams')}
             />
           )}
 
@@ -1147,7 +1218,7 @@ export default function App() {
               players={effectivePlayers}
               categories={categories}
               onUpdateDraftSettings={handleUpdateSettings}
-              onStartDraft={() => setCurrentView('live')}
+              onStartDraft={() => navigateToView('live')}
             />
           )}
 
@@ -1162,8 +1233,8 @@ export default function App() {
               onUndoLatestPick={handleUndoLatestPick}
               onUpdateDraftCategory={handleUpdateDraftCategory}
               onCompleteDraft={handleCompleteDraft}
-              onNavigateToResults={() => setCurrentView('results')}
-              onNavigateToHistory={() => setCurrentView('history')}
+              onNavigateToResults={() => navigateToView('results')}
+              onNavigateToHistory={() => navigateToView('history')}
               onSaveDraft={handleSaveDraft}
               onBulkSavePlayers={handleBulkSavePlayers}
             />
@@ -1176,7 +1247,7 @@ export default function App() {
               teams={teams}
               categories={categories}
               onUndoLatestPick={handleUndoLatestPick}
-              onNavigateToLive={() => setCurrentView('live')}
+              onNavigateToLive={() => navigateToView('live')}
             />
           )}
 

@@ -83,6 +83,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const handleNavClick = (view: NavView) => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.scrollingElement) {
+      document.scrollingElement.scrollTop = 0;
+      document.scrollingElement.scrollLeft = 0;
+    }
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const rootEl = document.getElementById('root');
+    if (rootEl) rootEl.scrollTop = 0;
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.scrollTop = 0;
     onSelectView(view);
     onCloseMobile();
   };

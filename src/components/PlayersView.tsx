@@ -443,6 +443,8 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                           <img
                             src={player.photoUrl}
                             alt={player.fullName}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover transition-transform group-hover/zoom:scale-105"
                             referrerPolicy="no-referrer"
                           />

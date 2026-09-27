@@ -723,6 +723,8 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                           <img
                             src={team.logoUrl}
                             alt={team.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-contain p-1"
                             referrerPolicy="no-referrer"
                           />
@@ -816,6 +818,8 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                               <img
                                 src={tp.photoUrl}
                                 alt={tp.fullName}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-cover transition-transform group-hover/zoom:scale-105"
                               />
                             ) : (
