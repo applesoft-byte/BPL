@@ -21,6 +21,7 @@ import {
   Eye,
   Check,
   Filter,
+  Maximize2,
 } from 'lucide-react';
 import { Category, Draft, PickRecord, Player, Team } from '../types';
 import { BplLogo } from './BplLogo';
@@ -29,6 +30,7 @@ import { DraftPoolModal } from './DraftPoolModal';
 import { TournamentEditModal } from './TournamentEditModal';
 import { StadiumLotteryArena } from './StadiumLotteryArena';
 import { TeamOrbitSpinOverlay } from './TeamOrbitSpinOverlay';
+import { PhotoZoomModal } from './PhotoZoomModal';
 
 interface LiveDraftViewProps {
   draft: Draft;
@@ -71,6 +73,7 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
   const [winningTeam, setWinningTeam] = useState<Team | null>(null);
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [autoPickEnabled, setAutoPickEnabled] = useState<boolean>(false);
+  const [zoomedPlayer, setZoomedPlayer] = useState<Player | null>(null);
   const autoPickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Selected player on deck (the player about to be drafted)
@@ -673,12 +676,19 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
                         : 'bg-slate-50 border-slate-200 hover:bg-white hover:border-slate-300'
                     }`}
                   >
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white border border-slate-200 overflow-hidden flex items-center justify-center relative shadow-2xs mb-1">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setZoomedPlayer(player);
+                      }}
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white border border-slate-200 overflow-hidden flex items-center justify-center relative shadow-2xs mb-1 cursor-pointer group/zoom hover:ring-2 hover:ring-[#1283E6] transition-all"
+                      title="Click to view large photo"
+                    >
                       {player.photoUrl ? (
                         <img
                           src={player.photoUrl}
                           alt={player.fullName}
-                          className="w-full h-full object-cover object-top"
+                          className="w-full h-full object-cover object-top transition-transform group-hover/zoom:scale-105"
                           referrerPolicy="no-referrer"
                         />
                       ) : (
@@ -686,11 +696,14 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
                           #{player.jerseyNumber || '00'}
                         </span>
                       )}
+                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center text-white transition-opacity">
+                        <Maximize2 className="w-3 h-3 text-white" />
+                      </div>
                       {isSelected && (
                         <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white" />
                       )}
                     </div>
-                    <h4 className="font-bold text-[11px] text-[#061A36] truncate w-full leading-tight">
+                    <h4 className="font-bold text-[11px] text-[#061A36] break-words w-full leading-tight">
                       {player.fullName}
                     </h4>
                     <span className="text-[8.5px] font-semibold text-slate-500 truncate w-full mt-0.5">
@@ -836,23 +849,30 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
 
             {/* Player Visual Card */}
             <div className="bg-[#E6F7FF] rounded-2xl p-5 border border-blue-200/80 space-y-2">
-              <div className="w-20 h-20 mx-auto rounded-2xl bg-white border-2 border-[#1283E6] overflow-hidden flex items-center justify-center shadow-md relative">
+              <div
+                onClick={() => setZoomedPlayer(congratsData.player)}
+                className="w-20 h-20 mx-auto rounded-2xl bg-white border-2 border-[#1283E6] overflow-hidden flex items-center justify-center shadow-md relative cursor-pointer group/zoom hover:ring-2 hover:ring-[#1283E6] transition-all"
+                title="Click to view large photo"
+              >
                 {congratsData.player.photoUrl ? (
                   <img
                     src={congratsData.player.photoUrl}
                     alt={congratsData.player.fullName}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform group-hover/zoom:scale-105"
                   />
                 ) : (
                   <span className="text-2xl font-black text-[#1283E6]">
                     #{congratsData.player.jerseyNumber || '00'}
                   </span>
                 )}
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center text-white transition-opacity">
+                  <Maximize2 className="w-5 h-5 text-white drop-shadow" />
+                </div>
                 <div className="absolute bottom-0 right-0 bg-[#061A36] text-white px-1.5 text-[9px] font-black rounded-tl-md">
                   #{congratsData.player.jerseyNumber}
                 </div>
               </div>
-              <h3 className="text-xl font-black text-[#061A36]">
+              <h3 className="text-xl font-black text-[#061A36] break-words">
                 {congratsData.player.fullName}
               </h3>
               <p className="text-xs font-bold text-[#1283E6] uppercase tracking-wider">
@@ -996,6 +1016,17 @@ export const LiveDraftView: React.FC<LiveDraftViewProps> = ({
         onClose={handleCloseSpinOverlay}
         autoPickEnabled={autoPickEnabled}
         tournamentLogo={draft.logoUrl}
+      />
+
+      {/* BIG PHOTO ZOOM LIGHTBOX MODAL */}
+      <PhotoZoomModal
+        isOpen={Boolean(zoomedPlayer)}
+        onClose={() => setZoomedPlayer(null)}
+        player={zoomedPlayer}
+        team={teams.find((t) => t.id === zoomedPlayer?.assignedTeamId)}
+        category={categories.find(
+          (c) => c.id === zoomedPlayer?.primaryCategoryId || c.id === zoomedPlayer?.assignedCategoryId
+        )}
       />
     </div>
   );

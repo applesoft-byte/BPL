@@ -619,7 +619,7 @@ const CentralLotteryWheel: React.FC<CentralLotteryWheelProps> = ({
             </div>
 
             {/* Large Full Name */}
-            <h3 className="mt-0.5 font-black text-[9.5px] sm:text-[11px] xl:text-[12px] text-white text-center leading-tight truncate max-w-[95px] sm:max-w-[115px] xl:max-w-[125px] drop-shadow-sm uppercase">
+            <h3 className="mt-0.5 font-black text-[9.5px] sm:text-[11px] xl:text-[12px] text-white text-center leading-tight break-words max-w-[125px] drop-shadow-sm uppercase">
               {highlightedPlayer.fullName}
             </h3>
 
@@ -720,9 +720,9 @@ const CentralLotteryWheel: React.FC<CentralLotteryWheelProps> = ({
                 )}
               </div>
 
-              {/* Player First Name */}
-              <span className="mt-0.5 font-bold text-[8px] sm:text-[8.5px] text-[#061A36] text-center truncate max-w-full leading-tight">
-                {player.fullName.split(' ')[0]}
+              {/* Player Full Name */}
+              <span className="mt-0.5 font-bold text-[8px] sm:text-[8.5px] text-[#061A36] text-center break-words max-w-full leading-tight">
+                {player.fullName}
               </span>
 
               {/* Role */}
@@ -1004,8 +1004,8 @@ const PerimeterTeamCard: React.FC<PerimeterTeamCardProps> = ({
                     </div>
 
                     {/* Name & Latest Badge */}
-                    <span className="flex-1 text-[8.5px] truncate leading-tight flex items-center gap-0.5">
-                      <span className="truncate">{tp.fullName}</span>
+                    <span className="flex-1 text-[8.5px] leading-tight flex items-center gap-0.5">
+                      <span className="break-words leading-tight">{tp.fullName}</span>
                       {isLatestDrafted && (
                         <span className="text-[6px] font-black text-amber-700 bg-amber-200/80 px-0.5 rounded shrink-0">
                           NEW

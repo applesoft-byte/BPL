@@ -102,50 +102,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          {/* Action Buttons in Two Columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 shrink-0 w-full md:w-auto md:min-w-[400px]">
+            {/* 1. CREATE NEW DRAFT */}
             <button
               onClick={onCreateNewDraft}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#1283E6] hover:bg-[#0A5DB8] text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-95"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1283E6] hover:bg-[#0A5DB8] text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
             >
-              <PlusCircle className="w-4 h-4" />
-              CREATE NEW DRAFT
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              <span>CREATE NEW DRAFT</span>
             </button>
 
-            {activeDraft && (
-              <button
-                onClick={stats.isComplete ? onNavigateToResults : onNavigateToLive}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#FF7A2E] hover:bg-[#e0661e] text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-95"
-              >
-                {stats.isComplete ? (
-                  <>
-                    <Trophy className="w-4 h-4" />
-                    VIEW FINAL SQUADS
-                  </>
-                ) : (
-                  <>
-                    <PlayCircle className="w-4 h-4" />
-                    RESUME DRAFT
-                  </>
-                )}
-              </button>
-            )}
+            {/* 2. VIEW FINAL SQUADS */}
+            <button
+              onClick={onNavigateToResults}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#FF7A2E] hover:bg-[#e0661e] text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              <Trophy className="w-4 h-4 shrink-0 text-amber-200" />
+              <span>VIEW FINAL SQUADS</span>
+            </button>
 
+            {/* 3. IMPORT DRAFT */}
             <button
               onClick={onImportBackup}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-[#061A36]/80 hover:bg-[#061A36] text-slate-200 border border-slate-600 font-semibold text-sm rounded-xl transition-all hover:text-white"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#061A36]/80 hover:bg-[#061A36] text-slate-200 hover:text-white border border-slate-600/80 hover:border-slate-400 font-semibold text-xs sm:text-sm rounded-xl transition-all shadow-xs cursor-pointer"
               title="Import draft JSON backup"
             >
-              <Upload className="w-4 h-4" />
-              IMPORT DRAFT
+              <Upload className="w-4 h-4 shrink-0 text-slate-300" />
+              <span>IMPORT DRAFT</span>
             </button>
 
+            {/* 4. LOAD SAMPLE S-2 DRAFT */}
             <button
               onClick={onLoadSampleData}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-emerald-600/90 hover:bg-emerald-600 text-white font-semibold text-sm rounded-xl transition-all shadow-sm"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600/90 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm rounded-xl transition-all shadow-sm border border-emerald-500/40 cursor-pointer"
               title="Load full ready-to-run BPL Season-2 demo dataset"
             >
-              <Sparkles className="w-4 h-4 text-emerald-200" />
-              LOAD SAMPLE S-2 DRAFT
+              <Sparkles className="w-4 h-4 shrink-0 text-emerald-200" />
+              <span>LOAD SAMPLE S-2 DRAFT</span>
             </button>
           </div>
         </div>

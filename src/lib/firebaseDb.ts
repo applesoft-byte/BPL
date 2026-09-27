@@ -13,6 +13,7 @@ import {
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { Category, Draft, PickRecord, Player, Team } from '../types';
+import { sanitizePlayerBangla } from './cleanUtils';
 
 export interface AppUserProfile {
   uid: string;
@@ -174,31 +175,32 @@ export const firebaseDb = {
 
   async saveSinglePlayer(player: Player, ownerId: string = 'superadmin'): Promise<void> {
     const path = `players/${player.id}`;
+    const sanitized = sanitizePlayerBangla(player);
     try {
       const cleanPlayer = {
-        id: player.id,
-        draftId: player.draftId,
-        fullName: player.fullName,
-        jerseyNumber: player.jerseyNumber || '',
-        primaryCategoryId: player.primaryCategoryId,
-        secondaryCategoryId: player.secondaryCategoryId || '',
-        playerType: player.playerType || '',
-        battingStyle: player.battingStyle || 'Right Handed',
-        bowlingStyle: player.bowlingStyle || '',
-        badge: player.badge || 'ALL-ROUNDER',
-        photoUrl: player.photoUrl || '',
-        inDraftPool: player.inDraftPool ?? true,
-        status: player.status || 'available',
-        assignedTeamId: player.assignedTeamId || '',
-        assignedCategoryId: player.assignedCategoryId || '',
-        isCaptain: player.isCaptain ?? false,
-        notes: player.notes || '',
-        contactEmail: player.contactEmail || '',
+        id: sanitized.id,
+        draftId: sanitized.draftId,
+        fullName: sanitized.fullName,
+        jerseyNumber: sanitized.jerseyNumber || '',
+        primaryCategoryId: sanitized.primaryCategoryId,
+        secondaryCategoryId: sanitized.secondaryCategoryId || '',
+        playerType: sanitized.playerType || '',
+        battingStyle: sanitized.battingStyle || 'Right Handed',
+        bowlingStyle: sanitized.bowlingStyle || '',
+        badge: sanitized.badge || 'ALL-ROUNDER',
+        photoUrl: sanitized.photoUrl || '',
+        inDraftPool: sanitized.inDraftPool ?? true,
+        status: sanitized.status || 'available',
+        assignedTeamId: sanitized.assignedTeamId || '',
+        assignedCategoryId: sanitized.assignedCategoryId || '',
+        isCaptain: sanitized.isCaptain ?? false,
+        notes: sanitized.notes || '',
+        contactEmail: sanitized.contactEmail || '',
         ownerId,
-        createdAt: player.createdAt || Date.now(),
+        createdAt: sanitized.createdAt || Date.now(),
         updatedAt: Date.now(),
       };
-      await setDoc(doc(db, 'players', player.id), cleanPlayer, { merge: true });
+      await setDoc(doc(db, 'players', sanitized.id), cleanPlayer, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -210,10 +212,39 @@ export const firebaseDb = {
       const q = query(collection(db, 'players'), where('draftId', '==', draftId));
       const snap = await getDocs(q);
       const list: Player[] = [];
-      snap.forEach((d) => list.push(d.data() as Player));
+      snap.forEach((d) => list.push(sanitizePlayerBangla(d.data() as Player)));
       return list;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, path);
+    }
+  },
+
+  async cleanBanglaFromFirestore(draftId: string): Promise<number> {
+    const path = 'players';
+    try {
+      const q = query(collection(db, 'players'), where('draftId', '==', draftId));
+      const snap = await getDocs(q);
+      let cleanedCount = 0;
+      for (const d of snap.docs) {
+        const raw = d.data() as Player;
+        const cleaned = sanitizePlayerBangla(raw);
+        if (cleaned.notes !== raw.notes || cleaned.fullName !== raw.fullName) {
+          await setDoc(
+            doc(db, 'players', raw.id),
+            {
+              ...cleaned,
+              notes: cleaned.notes || '',
+              updatedAt: Date.now(),
+            },
+            { merge: true }
+          );
+          cleanedCount++;
+        }
+      }
+      return cleanedCount;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+      return 0;
     }
   },
 
@@ -384,7 +415,7 @@ export const firebaseDb = {
       q,
       (snap) => {
         const list: Player[] = [];
-        snap.forEach((d) => list.push(d.data() as Player));
+        snap.forEach((d) => list.push(sanitizePlayerBangla(d.data() as Player)));
         onUpdate(list);
       },
       (error) => {

@@ -22,6 +22,7 @@ import { testFirestoreConnection } from './lib/firebase';
 import { firebaseDb } from './lib/firebaseDb';
 import { AppUser } from './types';
 import { authService } from './lib/authService';
+import { sanitizePlayerBangla } from './lib/cleanUtils';
 
 export default function App() {
   // Navigation View State
@@ -208,27 +209,45 @@ export default function App() {
 
         // Also check if any existing player has 'Emon (Crown)' or 'Raihan Emon' and rename to 'Rayhan Emon'
         let emonRenamed = false;
+        let banglaCleaned = false;
         const mappedPlayers = updatedPlayersList.map((p) => {
+          let updatedPlayer = p;
           if (p.fullName === 'Emon (Crown)' || p.fullName === 'Raihan Emon') {
             emonRenamed = true;
-            return {
+            updatedPlayer = {
               ...p,
               fullName: 'Rayhan Emon',
               battingStyle: 'Right Handed' as const,
               bowlingStyle: 'Left Arm Spinner',
               playerType: 'Right Handed • Left Arm Spinner',
-              notes: 'Bangla: রায়হান ইমন | Batsman Level-01',
+              notes: 'Batsman Level-01',
               updatedAt: Date.now(),
             };
           }
-          return p;
+          // Remove any Bangla from notes or fullName
+          const sanitized = sanitizePlayerBangla(updatedPlayer);
+          if (sanitized.notes !== updatedPlayer.notes || sanitized.fullName !== updatedPlayer.fullName) {
+            banglaCleaned = true;
+            return {
+              ...sanitized,
+              updatedAt: Date.now(),
+            };
+          }
+          return updatedPlayer;
         });
 
-        if (playersNeedingUpdate || emonRenamed || filteredDbPlayers.length !== dbPlayers.length) {
+        if (playersNeedingUpdate || emonRenamed || banglaCleaned || filteredDbPlayers.length !== dbPlayers.length) {
           await db.bulkSavePlayers(mappedPlayers);
           setPlayers(mappedPlayers);
         } else {
-          setPlayers(dbPlayers);
+          setPlayers(mappedPlayers);
+        }
+
+        // Clean Bangla records from Firestore in background
+        if (activeDraft?.id) {
+          firebaseDb.cleanBanglaFromFirestore(activeDraft.id).catch((err) => {
+            console.warn('Firestore bangla cleanup non-fatal warning:', err);
+          });
         }
 
         setTeams(dbTeams);
@@ -276,8 +295,9 @@ export default function App() {
 
       unsubPlayers = firebaseDb.subscribePlayers(activeDraftId, (cloudPlayers) => {
         if (cloudPlayers && cloudPlayers.length > 0) {
-          setPlayers(cloudPlayers);
-          db.bulkSavePlayers(cloudPlayers).catch(() => {});
+          const sanitizedCloudPlayers = cloudPlayers.map(sanitizePlayerBangla);
+          setPlayers(sanitizedCloudPlayers);
+          db.bulkSavePlayers(sanitizedCloudPlayers).catch(() => {});
         }
       });
 
@@ -760,12 +780,15 @@ export default function App() {
         onToggleCollapse={handleToggleSidebar}
         mobileOpen={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
+        draft={activeDraft}
+        onSaveDraft={handleSaveDraft}
+        currentUser={currentUser}
       />
 
       {/* Main Content Area */}
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? 'md:pl-[64px]' : 'md:pl-[204px]'
+          sidebarCollapsed ? 'md:pl-[64px]' : 'md:pl-[210px]'
         }`}
       >
         {/* Top Header */}

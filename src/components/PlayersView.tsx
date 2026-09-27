@@ -17,11 +17,14 @@ import {
   Image as ImageIcon,
   Loader2,
   Cloud,
+  Maximize2,
 } from 'lucide-react';
 import { Category, Player, PlayerBadge, Team, AppUser } from '../types';
 import { CsvImportModal } from './CsvImportModal';
 import { DraftPoolModal } from './DraftPoolModal';
 import { fileToDataUrl } from '../lib/imageUtils';
+import { PhotoZoomModal } from './PhotoZoomModal';
+import { sanitizePlayerBangla } from '../lib/cleanUtils';
 
 interface PlayersViewProps {
   players: Player[];
@@ -59,6 +62,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
   // Quick Direct Card Photo Upload State & Feedback Toast
   const [uploadingPlayerId, setUploadingPlayerId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [zoomedPlayer, setZoomedPlayer] = useState<Player | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -105,16 +109,17 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
   }, [players, searchTerm, selectedCategory, selectedStatus, poolFilter, sortBy]);
 
   const handleOpenAdd = () => {
+    // Fields are NOT preselected as requested
     setEditingPlayer({
       id: `player-${Date.now()}`,
       draftId: activeDraftId,
       fullName: '',
-      jerseyNumber: `${players.length + 1}`,
-      primaryCategoryId: categories[0]?.id || '',
-      playerType: 'All-Rounder',
-      battingStyle: 'Right Handed',
-      bowlingStyle: 'Right-arm Medium',
-      badge: 'ALL-ROUNDER',
+      jerseyNumber: '', // Not preselected
+      primaryCategoryId: '', // Not preselected
+      playerType: '', // Not preselected
+      battingStyle: '', // Not preselected
+      bowlingStyle: '', // Not preselected
+      badge: '', // Not preselected
       inDraftPool: true,
       status: 'available',
       createdAt: Date.now(),
@@ -157,12 +162,27 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
 
   const handleSaveModal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPlayer || !editingPlayer.fullName.trim()) return;
+    if (!editingPlayer) return;
 
-    await onSavePlayer({
-      ...editingPlayer,
-      updatedAt: Date.now(),
-    });
+    if (!editingPlayer.fullName.trim()) {
+      alert('Please enter Player Full Name.');
+      return;
+    }
+    if (!editingPlayer.jerseyNumber.trim()) {
+      alert('Please enter Jersey Number.');
+      return;
+    }
+    if (!editingPlayer.primaryCategoryId) {
+      alert('Please select Role Category.');
+      return;
+    }
+
+    await onSavePlayer(
+      sanitizePlayerBangla({
+        ...editingPlayer,
+        updatedAt: Date.now(),
+      })
+    );
     setIsEditModalOpen(false);
     setEditingPlayer(null);
   };
@@ -221,7 +241,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
     document.body.removeChild(link);
   };
 
-  const getBadgeStyle = (badge: PlayerBadge) => {
+  const getBadgeStyle = (badge: PlayerBadge | string) => {
     switch (badge) {
       case 'HARD HITTER':
         return 'bg-red-50 text-[#DC2626] border-red-200';
@@ -394,8 +414,12 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                 <div>
                   {/* Card Top: Photo & Badges */}
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="relative group/avatar">
-                      <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs relative">
+                    <div className="relative">
+                      <div
+                        onClick={() => setZoomedPlayer(player)}
+                        className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs relative cursor-pointer group/zoom hover:ring-2 hover:ring-[#1283E6] transition-all"
+                        title="Click to view large photo"
+                      >
                         {uploadingPlayerId === player.id ? (
                           <div className="absolute inset-0 bg-[#061A36]/80 flex flex-col items-center justify-center text-white z-20">
                             <Loader2 className="w-5 h-5 animate-spin text-[#1283E6]" />
@@ -407,7 +431,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                           <img
                             src={player.photoUrl}
                             alt={player.fullName}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transition-transform group-hover/zoom:scale-105"
                             referrerPolicy="no-referrer"
                           />
                         ) : (
@@ -416,40 +440,9 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                           </div>
                         )}
 
-                        {/* Quick Hover Photo Upload Overlay */}
-                        <label
-                          className="absolute inset-0 bg-[#061A36]/75 opacity-0 group-hover/avatar:opacity-100 flex flex-col items-center justify-center text-white transition-opacity cursor-pointer z-10 text-center p-1"
-                          title="Click to change photo instantly (stored in database & website)"
-                        >
-                          <Camera className="w-4 h-4 text-amber-400" />
-                          <span className="text-[8px] font-extrabold tracking-tight mt-0.5 leading-none">Photo</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            disabled={uploadingPlayerId === player.id}
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              try {
-                                setUploadingPlayerId(player.id);
-                                const dataUrl = await fileToDataUrl(file, 400, 400, 0.85);
-                                const updated = {
-                                  ...player,
-                                  photoUrl: dataUrl,
-                                  updatedAt: Date.now(),
-                                };
-                                await onSavePlayer(updated);
-                                showToast(`Photo for "${player.fullName}" stored in database and live on website!`);
-                              } catch (err: any) {
-                                alert(err.message || 'Failed to upload photo');
-                              } finally {
-                                setUploadingPlayerId(null);
-                                e.target.value = '';
-                              }
-                            }}
-                          />
-                        </label>
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center text-white transition-opacity pointer-events-none">
+                          <Maximize2 className="w-4 h-4 text-white drop-shadow" />
+                        </div>
                       </div>
                       <div className="absolute -bottom-1.5 -right-1.5 px-1.5 py-0.2 bg-[#061A36] text-white font-extrabold text-[10px] rounded-md shadow-xs z-10">
                         #{player.jerseyNumber || '00'}
@@ -479,7 +472,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                   </div>
 
                   {/* Player Name & Category */}
-                  <h3 className="font-extrabold text-sm text-[#061A36] truncate">
+                  <h3 className="font-extrabold text-sm text-[#061A36] leading-snug break-words">
                     {player.fullName}
                   </h3>
                   <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500">
@@ -487,7 +480,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                       className="w-2 h-2 rounded-full shrink-0"
                       style={{ backgroundColor: category?.color || '#1283E6' }}
                     />
-                    <span className="truncate font-medium">{category?.name || 'Unassigned'}</span>
+                    <span className="font-medium break-words">{category?.name || 'Unassigned'}</span>
                   </div>
 
                   {/* Cricket Details */}
@@ -706,12 +699,16 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                       Role Category <span className="text-red-500">*</span>
                     </label>
                     <select
+                      required
                       value={editingPlayer.primaryCategoryId}
                       onChange={(e) =>
                         setEditingPlayer({ ...editingPlayer, primaryCategoryId: e.target.value })
                       }
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#1283E6]"
                     >
+                      <option value="" disabled>
+                        -- Select Role Category * --
+                      </option>
                       {categories.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
@@ -732,7 +729,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                     onChange={(e) =>
                       setEditingPlayer({ ...editingPlayer, playerType: e.target.value })
                     }
-                    placeholder="e.g. Pure Batter, Express Pacer"
+                    placeholder="e.g. Pure Batter, Express Pacer, All-Rounder"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#1283E6]"
                   />
                 </div>
@@ -746,11 +743,12 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                       onChange={(e) =>
                         setEditingPlayer({
                           ...editingPlayer,
-                          battingStyle: e.target.value as 'Right Handed' | 'Left Handed',
+                          battingStyle: e.target.value as 'Right Handed' | 'Left Handed' | '',
                         })
                       }
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#1283E6]"
                     >
+                      <option value="">-- Select Batting Style --</option>
                       <option value="Right Handed">Right Handed</option>
                       <option value="Left Handed">Left Handed</option>
                     </select>
@@ -769,6 +767,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                       }
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#1283E6]"
                     >
+                      <option value="">-- Select Skill Badge --</option>
                       <option value="ALL-ROUNDER">ALL-ROUNDER</option>
                       <option value="HARD HITTER">HARD HITTER</option>
                       <option value="CLASSIC">CLASSIC</option>
@@ -779,6 +778,8 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                       <option value="GAME CHANGER">GAME CHANGER</option>
                       <option value="SAFE HANDS">SAFE HANDS</option>
                       <option value="LEADER">LEADER</option>
+                      <option value="BATTER">BATTER</option>
+                      <option value="BOWLER">BOWLER</option>
                     </select>
                   </div>
                 </div>
@@ -808,7 +809,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#1283E6] hover:bg-[#0A5DB8] text-white text-xs font-bold rounded-xl transition-all shadow-xs"
+                  className="px-4 py-2 bg-[#1283E6] hover:bg-[#0A5DB8] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
                 >
                   Save Player
                 </button>
@@ -817,6 +818,15 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Big Photo Zoom Lightbox Modal */}
+      <PhotoZoomModal
+        isOpen={Boolean(zoomedPlayer)}
+        onClose={() => setZoomedPlayer(null)}
+        player={zoomedPlayer}
+        team={teams.find((t) => t.id === zoomedPlayer?.assignedTeamId)}
+        category={categories.find((c) => c.id === zoomedPlayer?.primaryCategoryId)}
+      />
 
       {/* CSV Import Modal */}
       {isCsvModalOpen && (

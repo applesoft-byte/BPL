@@ -13,6 +13,7 @@ import {
   Info,
 } from 'lucide-react';
 import { Category, Player, PlayerBadge } from '../types';
+import { sanitizePlayerBangla } from '../lib/cleanUtils';
 
 interface CsvImportModalProps {
   isOpen: boolean;
@@ -349,21 +350,23 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     const validRows = parsedRows.filter((r) => r.isValid && !r.isDuplicate);
     const now = Date.now();
 
-    const newPlayers: Player[] = validRows.map((r, i) => ({
-      id: `player-imp-${now}-${i}`,
-      draftId,
-      fullName: r.fullName,
-      jerseyNumber: r.jerseyNumber,
-      primaryCategoryId: r.matchedCategoryId || categories[0]?.id || '',
-      playerType: r.playerType,
-      battingStyle: r.battingStyle,
-      bowlingStyle: r.bowlingStyle,
-      badge: r.badge,
-      inDraftPool: true,
-      status: 'available',
-      createdAt: now,
-      updatedAt: now,
-    }));
+    const newPlayers: Player[] = validRows.map((r, i) =>
+      sanitizePlayerBangla({
+        id: `player-imp-${now}-${i}`,
+        draftId,
+        fullName: r.fullName,
+        jerseyNumber: r.jerseyNumber,
+        primaryCategoryId: r.matchedCategoryId || categories[0]?.id || '',
+        playerType: r.playerType,
+        battingStyle: r.battingStyle,
+        bowlingStyle: r.bowlingStyle,
+        badge: r.badge,
+        inDraftPool: true,
+        status: 'available',
+        createdAt: now,
+        updatedAt: now,
+      })
+    );
 
     onImportComplete(newPlayers);
     onClose();

@@ -4,6 +4,8 @@ export type AnimationSpeed = 'fast' | 'normal' | 'slow';
 export type CategoryDraftMode = 'category_by_category' | 'all_mixed' | 'manual';
 
 export type PlayerBadge =
+  | 'BATTER'
+  | 'BOWLER'
   | 'HARD HITTER'
   | 'CLASSIC'
   | 'DESTROYER'
@@ -14,7 +16,8 @@ export type PlayerBadge =
   | 'GAME CHANGER'
   | 'SAFE HANDS'
   | 'LEADER'
-  | 'CAPTAIN';
+  | 'CAPTAIN'
+  | '';
 
 export interface Player {
   id: string;
@@ -24,9 +27,9 @@ export interface Player {
   primaryCategoryId: string;
   secondaryCategoryId?: string;
   playerType: string;
-  battingStyle: 'Right Handed' | 'Left Handed';
+  battingStyle: 'Right Handed' | 'Left Handed' | '' | string;
   bowlingStyle: string;
-  badge: PlayerBadge;
+  badge: PlayerBadge | string;
   photoUrl?: string; // Data URL or asset key
   inDraftPool?: boolean; // Controls if player is selected for draft lottery
   contactEmail?: string;

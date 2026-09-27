@@ -18,9 +18,11 @@ import {
   ChevronDown,
   X,
   UserCheck,
+  Maximize2,
 } from 'lucide-react';
 import { Category, Player, Team, AppUser } from '../types';
 import { fileToDataUrl } from '../lib/imageUtils';
+import { PhotoZoomModal } from './PhotoZoomModal';
 
 interface TeamsViewProps {
   teams: Team[];
@@ -307,6 +309,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [zoomedPlayer, setZoomedPlayer] = useState<Player | null>(null);
 
   // User mandate: Preset choices are: 8 players, 10 players, 11 players, 12 players, and underneath custom option
   const squadPresets = [8, 10, 11, 12];
@@ -691,6 +694,11 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
             const maxCap = team.maxPlayers || defaultSquadSize;
             const isFull = teamPlayers.length >= maxCap;
             const progress = maxCap > 0 ? Math.round((teamPlayers.length / maxCap) * 100) : 0;
+            const captainPlayer = players.find(
+              (p) =>
+                p.id === team.captainPlayerId ||
+                (team.captainName && p.fullName.toLowerCase() === team.captainName.toLowerCase())
+            );
 
             return (
               <div
@@ -737,10 +745,17 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                             Squad Quota: {maxCap} Players
                           </span>
                           {team.captainName && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (captainPlayer) setZoomedPlayer(captainPlayer);
+                              }}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer"
+                              title={captainPlayer ? "Click to view captain photo" : undefined}
+                            >
                               <Crown className="w-3 h-3 text-amber-500" />
                               Captain: {team.captainName}
-                            </span>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -778,6 +793,44 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                       />
                     </div>
                   </div>
+
+                  {/* Drafted Squad Player Photos with Click to Zoom */}
+                  {teamPlayers.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5 text-slate-400" />
+                          Drafted Squad ({teamPlayers.length})
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal">Click photo to zoom</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {teamPlayers.map((tp) => (
+                          <div
+                            key={tp.id}
+                            onClick={() => setZoomedPlayer(tp)}
+                            className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center cursor-pointer group/zoom relative hover:ring-2 hover:ring-[#1283E6] transition-all"
+                            title={`${tp.fullName} (#${tp.jerseyNumber || '00'}) - Click to view large photo`}
+                          >
+                            {tp.photoUrl ? (
+                              <img
+                                src={tp.photoUrl}
+                                alt={tp.fullName}
+                                className="w-full h-full object-cover transition-transform group-hover/zoom:scale-105"
+                              />
+                            ) : (
+                              <span className="text-[9px] font-black text-slate-600">
+                                #{tp.jerseyNumber || tp.fullName.slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                            <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center text-white transition-opacity">
+                              <Maximize2 className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Category Quotas Breakdown */}
                   <div className="space-y-2 pt-2 border-t border-slate-100">
@@ -1189,6 +1242,17 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* BIG PHOTO ZOOM LIGHTBOX MODAL */}
+      <PhotoZoomModal
+        isOpen={Boolean(zoomedPlayer)}
+        onClose={() => setZoomedPlayer(null)}
+        player={zoomedPlayer}
+        team={teams.find((t) => t.id === zoomedPlayer?.assignedTeamId)}
+        category={categories.find(
+          (c) => c.id === zoomedPlayer?.primaryCategoryId || c.id === zoomedPlayer?.assignedCategoryId
+        )}
+      />
     </div>
   );
 };

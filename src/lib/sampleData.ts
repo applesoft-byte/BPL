@@ -4,6 +4,7 @@ import {
   TEAM_DEFAULT_LOGOS,
   generateCricketAvatar,
 } from './imageUtils';
+import { sanitizePlayerBangla } from './cleanUtils';
 
 export function createSampleDraftData(): {
   draft: Draft;
@@ -251,7 +252,6 @@ export function createSampleDraftData(): {
   const officialPlayersRaw: Array<{
     idKey?: string;
     fullName: string;
-    bengaliName?: string;
     email?: string;
     contact?: string;
     cat: string;
@@ -262,13 +262,12 @@ export function createSampleDraftData(): {
     driveId?: string;
   }> = [
     // =========================================================================
-    // SECTION 1: BATSMAN CATEGORY (ব্যাটসম্যান ক্যাটাগরি)
+    // SECTION 1: BATSMAN CATEGORY
     // =========================================================================
 
-    // --- Batsman Level-01 (ব্যাটসম্যান লেভেল-০১) ---
+    // --- Batsman Level-01 ---
     {
       fullName: 'Abdullah Akash',
-      bengaliName: 'আকাশ',
       email: 'akash.bpl@gmail.com',
       contact: '01856677832',
       cat: 'cat-bat-lvl-1',
@@ -280,7 +279,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Mohammad Emon',
-      bengaliName: 'ইমন',
       email: 'tee279783@gmail.com',
       contact: '01516596165',
       cat: 'cat-bat-lvl-1',
@@ -292,7 +290,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Rayhan Emon',
-      bengaliName: 'রায়হান ইমন',
       cat: 'cat-bat-lvl-1',
       bat: 'Right Handed',
       bowl: 'Left Arm Spinner',
@@ -300,7 +297,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Jahangir',
-      bengaliName: 'জাহাঙ্গীর',
       email: 'ja9771765@gmail.com',
       contact: '01609757285',
       cat: 'cat-bat-lvl-1',
@@ -312,7 +308,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'MD. Saidul Islam Polash',
-      bengaliName: 'পলাশ',
       email: 'S.polash120@gmail.com',
       contact: '01972591997',
       cat: 'cat-bat-lvl-1',
@@ -324,17 +319,15 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Mohon',
-      bengaliName: 'মোহন',
       cat: 'cat-bat-lvl-1',
       bat: 'Right Handed',
       bowl: 'None',
       badge: 'CLASSIC',
     },
 
-    // --- Batsman Level-02 (ব্যাটসম্যান লেভেল-০২) ---
+    // --- Batsman Level-02 ---
     {
       fullName: 'Abran',
-      bengaliName: 'আবরান',
       cat: 'cat-bat-lvl-2',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -342,7 +335,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Sakhawat Hossain',
-      bengaliName: 'শাখাওয়াত',
       email: 'sakhawat.bpl@gmail.com',
       contact: '01601998679',
       cat: 'cat-bat-lvl-2',
@@ -354,7 +346,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'MD NAIEEM KHAN RONI',
-      bengaliName: 'নাঈম রনি',
       email: 'naiemroni1995@gmail.com',
       contact: '01624285175',
       cat: 'cat-bat-lvl-2',
@@ -366,7 +357,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Omar Hossain',
-      bengaliName: 'ওমর',
       email: 'omar.bpl@gmail.com',
       contact: '01633522580',
       cat: 'cat-bat-lvl-2',
@@ -378,7 +368,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Saiful Islam Antor',
-      bengaliName: 'অন্তর',
       email: 'Antorn19@gmail.com',
       contact: '01944009577',
       cat: 'cat-bat-lvl-2',
@@ -390,7 +379,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Shuvo',
-      bengaliName: 'শুভ',
       email: 'shuvo.bpl@gmail.com',
       contact: '01829548006',
       cat: 'cat-bat-lvl-2',
@@ -401,10 +389,9 @@ export function createSampleDraftData(): {
       driveId: '1GtqK9-oJXLFDlTx3HXjzO78iFdAOhw12',
     },
 
-    // --- Batsman Level-03 (ব্যাটসম্যান লেভেল-০৩) ---
+    // --- Batsman Level-03 ---
     {
       fullName: 'MD Mokka Sarker',
-      bengaliName: 'মক্কা',
       email: 'mokka.bpl@gmail.com',
       contact: '01793626848',
       cat: 'cat-bat-lvl-3',
@@ -416,7 +403,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Shuvo Senior',
-      bengaliName: 'শুভ সিনিয়র',
       cat: 'cat-bat-lvl-3',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -424,7 +410,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Rana Khan',
-      bengaliName: 'রানা খান',
       email: 'ranakhan.bpl@gmail.com',
       contact: '01538370725',
       cat: 'cat-bat-lvl-3',
@@ -436,7 +421,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Ashraful Shohel',
-      bengaliName: 'আশরাফুল',
       email: 'westernmuslimabad@gmail.com',
       contact: '01833000000',
       cat: 'cat-bat-lvl-3',
@@ -448,7 +432,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Arif Khan',
-      bengaliName: 'আরিফ খান',
       cat: 'cat-bat-lvl-3',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -456,17 +439,15 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Nazim (Zahid)',
-      bengaliName: 'নাজিম (জাহিদ)',
       cat: 'cat-bat-lvl-3',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
       badge: 'HARD HITTER',
     },
 
-    // --- Batsman Level-04 (ব্যাটসম্যান লেভেল-০৪) ---
+    // --- Batsman Level-04 ---
     {
       fullName: 'Shahriar Alom Rafin',
-      bengaliName: 'শাহরিয়ার',
       email: 'rafinff262@gmail.com',
       contact: '01761148580',
       cat: 'cat-bat-lvl-4',
@@ -478,7 +459,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Alauddin',
-      bengaliName: 'আলাউদ্দিন',
       cat: 'cat-bat-lvl-4',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -486,7 +466,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Alal',
-      bengaliName: 'আলাল',
       cat: 'cat-bat-lvl-4',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -494,7 +473,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Md. Sohanur Rohman',
-      bengaliName: 'সোহান',
       email: 'sohanur.bpl@gmail.com',
       contact: '01781292912',
       cat: 'cat-bat-lvl-4',
@@ -506,7 +484,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Selim Badsha',
-      bengaliName: 'সেলিম',
       email: 'selimbadsha@gmail.com',
       contact: '01893249247',
       cat: 'cat-bat-lvl-4',
@@ -518,7 +495,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Rana',
-      bengaliName: 'রানা',
       email: 'rana.bpl@gmail.com',
       contact: '01810760541',
       cat: 'cat-bat-lvl-4',
@@ -530,13 +506,12 @@ export function createSampleDraftData(): {
     },
 
     // =========================================================================
-    // SECTION 2: ALL-ROUNDER CATEGORY (অলরাউন্ডার ক্যাটাগরি)
+    // SECTION 2: ALL-ROUNDER CATEGORY
     // =========================================================================
 
-    // --- Bowling-Batting Equal (বোলিং-ব্যাটিং সমান) ---
+    // --- Bowling-Batting Equal ---
     {
       fullName: 'M. Fahim',
-      bengaliName: 'ফাহিম',
       email: 'fahim.bpl@gmail.com',
       contact: '01619416644',
       cat: 'cat-bowl-bat-equal',
@@ -548,7 +523,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Khalek',
-      bengaliName: 'খালেক',
       cat: 'cat-bowl-bat-equal',
       bat: 'Right Handed',
       bowl: 'Right Arm Fast',
@@ -556,7 +530,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Sohrab Ahmed Ayan',
-      bengaliName: 'অয়ন',
       email: 'sohrab.bpl@gmail.com',
       contact: '01607126226',
       cat: 'cat-bowl-bat-equal',
@@ -568,7 +541,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Hasan',
-      bengaliName: 'হাসান',
       cat: 'cat-bowl-bat-equal',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -576,7 +548,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Tanzim',
-      bengaliName: 'তানজিম',
       cat: 'cat-bowl-bat-equal',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -584,7 +555,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'RA Apon',
-      bengaliName: 'আপন',
       email: 'apon06canva@gmail.com',
       contact: '01816462090',
       cat: 'cat-bowl-bat-equal',
@@ -595,10 +565,9 @@ export function createSampleDraftData(): {
       driveId: '1L3FV6OQEIazz1beEm0THSUSM2WCiHJa7',
     },
 
-    // --- Batting All-Rounder (ব্যাটিং অলরাউন্ডার) ---
+    // --- Batting All-Rounder ---
     {
       fullName: 'AR Mukul',
-      bengaliName: 'মুকুল',
       email: 'ar.mukul@gmail.com',
       contact: '01673640084',
       cat: 'cat-bat-all-round',
@@ -610,7 +579,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Shafiqul Islam',
-      bengaliName: 'শফিক',
       email: 'shafiquldesigner57@gmail.com',
       contact: '01942068764',
       cat: 'cat-bat-all-round',
@@ -622,7 +590,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Zoni Ahmed',
-      bengaliName: 'জনি-২',
       email: 'zoniahmed15@gmail.com',
       contact: '01833-081331',
       cat: 'cat-bat-all-round',
@@ -634,7 +601,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Rezvi',
-      bengaliName: 'রেজভি',
       email: 'greenglow214@gmail.com',
       contact: '01791168132',
       cat: 'cat-bat-all-round',
@@ -646,7 +612,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Mehedi Hasan Mithun',
-      bengaliName: 'মিঠুন',
       email: 'mehedihasan20333@gmail.com',
       contact: '01882670212',
       cat: 'cat-bat-all-round',
@@ -658,17 +623,15 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Sujan',
-      bengaliName: 'সুজন',
       cat: 'cat-bat-all-round',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
       badge: 'ALL-ROUNDER',
     },
 
-    // --- Slow Bowling All-Rounder (স্লো বোলিং অলরাউন্ডার) ---
+    // --- Slow Bowling All-Rounder ---
     {
       fullName: 'Arif Iquebal',
-      bengaliName: 'আরিফ ইকবাল',
       email: 'arif.bpl@gmail.com',
       contact: '01878113798',
       cat: 'cat-slow-bowl-all',
@@ -680,7 +643,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Sohag',
-      bengaliName: 'সোহাগ',
       cat: 'cat-slow-bowl-all',
       bat: 'Right Handed',
       bowl: 'Right Arm Off Spin',
@@ -688,7 +650,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Y.A. Jony',
-      bengaliName: 'জনি',
       email: 'ya.jony@gmail.com',
       contact: '01934594920',
       cat: 'cat-slow-bowl-all',
@@ -700,7 +661,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Khorshed',
-      bengaliName: 'খোরশেদ',
       cat: 'cat-slow-bowl-all',
       bat: 'Right Handed',
       bowl: 'Right Arm Off Spin',
@@ -708,7 +668,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Shamim Islam',
-      bengaliName: 'শামিম',
       email: 'shamim.bpl@gmail.com',
       contact: '01904174565',
       cat: 'cat-slow-bowl-all',
@@ -720,7 +679,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Abdullah Al Mamun',
-      bengaliName: 'মামুন',
       email: 'mamun.bpl@gmail.com',
       contact: '01815892290',
       cat: 'cat-slow-bowl-all',
@@ -731,10 +689,9 @@ export function createSampleDraftData(): {
       driveId: '1m4N_j9MPlfV6KclND6gz5LyFmUWIjdj7',
     },
 
-    // --- Batting All-Rounder Level-2 (ব্যাটিং অলরাউন্ডার লেভেল-২) ---
+    // --- Batting All-Rounder Level-2 ---
     {
       fullName: 'LKD Sadek',
-      bengaliName: 'সাদেক',
       email: 'sadek.bpl@gmail.com',
       contact: '01407656394',
       cat: 'cat-bat-all-lvl-2',
@@ -746,7 +703,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Roni Khan',
-      bengaliName: 'রনি খান',
       email: 'ronikhan.bpl@gmail.com',
       contact: '01753146250',
       cat: 'cat-bat-all-lvl-2',
@@ -758,7 +714,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'RS Rafiq',
-      bengaliName: 'আর এস রফিক',
       email: 'rsboy8437@gmail.com',
       contact: '01679531737',
       cat: 'cat-bat-all-lvl-2',
@@ -770,7 +725,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Tusher Hossain',
-      bengaliName: 'তুষার',
       email: 'tusher.bpl@gmail.com',
       contact: '01855490339',
       cat: 'cat-bat-all-lvl-2',
@@ -782,7 +736,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Jahangir (2)',
-      bengaliName: 'জাহাঙ্গীর (২)',
       cat: 'cat-bat-all-lvl-2',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -790,7 +743,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'HK RONY',
-      bengaliName: 'এইচ.কে রনি',
       email: 'hkrony62@gmail.com',
       contact: '01613049526',
       cat: 'cat-bat-all-lvl-2',
@@ -802,14 +754,13 @@ export function createSampleDraftData(): {
     },
 
     // =========================================================================
-    // SECTION 3: BOWLER AND MINI ALL-ROUNDER (বোলার এবং মিনি অলরাউন্ডার)
+    // SECTION 3: BOWLER AND MINI ALL-ROUNDER
     // =========================================================================
 
-    // --- Bowling (বোলিং) ---
+    // --- Bowling ---
     {
       idKey: 'player-asif',
       fullName: 'Asif',
-      bengaliName: 'আসিফ',
       email: 'asif.bpl@gmail.com',
       contact: '01623992742',
       cat: 'cat-bowling',
@@ -822,7 +773,6 @@ export function createSampleDraftData(): {
     {
       idKey: 'player-mostafiz',
       fullName: 'Md. Mostafizur Rahman',
-      bengaliName: 'মোস্তাফিজ',
       email: 'smrocky176@gmail.com',
       contact: '01618214165',
       cat: 'cat-bowling',
@@ -834,7 +784,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Nahid',
-      bengaliName: 'নাহিদ',
       cat: 'cat-bowling',
       bat: 'Right Handed',
       bowl: 'Right Arm Fast',
@@ -842,7 +791,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Rifat',
-      bengaliName: 'রিফাত',
       cat: 'cat-bowling',
       bat: 'Right Handed',
       bowl: 'Right Arm Fast',
@@ -850,7 +798,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Sabbir',
-      bengaliName: 'সাব্বির',
       cat: 'cat-bowling',
       bat: 'Right Handed',
       bowl: 'Right Arm Fast',
@@ -858,7 +805,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'FH Noman',
-      bengaliName: 'নোমান',
       email: 'mdnomanahmed16@gmail.com',
       contact: '01857697069',
       cat: 'cat-bowling',
@@ -869,10 +815,9 @@ export function createSampleDraftData(): {
       driveId: '19IZKmuyBlfmeOL1Iu_UaZ56-3mTp7Iyt',
     },
 
-    // --- Mini All-Rounder (মিনি অলরাউন্ডার) ---
+    // --- Mini All-Rounder ---
     {
       fullName: 'Raja',
-      bengaliName: 'রাজা',
       cat: 'cat-mini-all',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -880,7 +825,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Robiul',
-      bengaliName: 'রবিউল',
       cat: 'cat-mini-all',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -888,7 +832,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'M Saiful',
-      bengaliName: 'সাইফুল',
       email: 'saiful.bpl@gmail.com',
       contact: '01740705002',
       cat: 'cat-mini-all',
@@ -900,7 +843,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Jahangir (MH)',
-      bengaliName: 'জাহাঙ্গীর (MH)',
       cat: 'cat-mini-all',
       bat: 'Right Handed',
       bowl: 'Right Arm Medium',
@@ -908,7 +850,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Mohammad Nazim',
-      bengaliName: 'নাজিম',
       email: 'theking187049@gmail.com',
       contact: '01797591183',
       cat: 'cat-mini-all',
@@ -920,7 +861,6 @@ export function createSampleDraftData(): {
     },
     {
       fullName: 'Monjurul Islam',
-      bengaliName: 'মঞ্জুরুল',
       email: 'monjurulcakari@gmail.com',
       contact: '01776651356',
       cat: 'cat-mini-all',
@@ -935,7 +875,6 @@ export function createSampleDraftData(): {
     {
       idKey: 'player-shahin',
       fullName: 'Kazi Shahin',
-      bengaliName: 'কাজী শাহিন',
       email: 'kazishahin511@gmail.com',
       contact: '01303768427',
       cat: 'cat-bowl-bat-equal',
@@ -1044,13 +983,13 @@ export function createSampleDraftData(): {
 
     // Match in official Season-2 roster/picks
     const pickAssignment = season2PicksOrder.find(
-      (item) => item.fullName.toLowerCase() === raw.fullName.toLowerCase()
+      (item) => item.fullName.toLowerCase === raw.fullName.toLowerCase
     );
 
     const isCaptain = !!pickAssignment?.isCaptain || teams.some((t) => t.captainPlayerId === playerId);
     const badge: PlayerBadge = isCaptain ? 'CAPTAIN' : (raw.badge || 'ALL-ROUNDER');
 
-    return {
+    return sanitizePlayerBangla({
       id: playerId,
       draftId,
       fullName: raw.fullName,
@@ -1063,14 +1002,14 @@ export function createSampleDraftData(): {
       photoUrl: photo,
       inDraftPool: true,
       contactEmail: raw.email,
-      notes: `Bangla: ${raw.bengaliName || raw.fullName}${raw.contact ? ` | Phone: ${raw.contact}` : ''}${raw.currentTeam ? ` | Prev: ${raw.currentTeam}` : ''}`,
+      notes: `${raw.contact ? `Phone: ${raw.contact}` : ''}${raw.currentTeam ? ` | Prev: ${raw.currentTeam}` : ''}`.trim() || undefined,
       status: pickAssignment ? 'drafted' : 'available',
       isCaptain,
       assignedTeamId: pickAssignment?.teamId,
       assignedCategoryId: pickAssignment?.catId || raw.cat,
       createdAt: now,
       updatedAt: now,
-    };
+    });
   });
 
   const draftStartTime = now - 60 * 60 * 1000 * 2;

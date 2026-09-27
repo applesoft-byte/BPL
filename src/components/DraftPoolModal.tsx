@@ -9,8 +9,10 @@ import {
   Sparkles,
   Filter,
   Shield,
+  Maximize2,
 } from 'lucide-react';
 import { Category, Player, Team } from '../types';
+import { PhotoZoomModal } from './PhotoZoomModal';
 
 interface DraftPoolModalProps {
   isOpen: boolean;
@@ -34,6 +36,7 @@ export const DraftPoolModal: React.FC<DraftPoolModalProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
     return new Set(players.filter((p) => p.inDraftPool !== false).map((p) => p.id));
   });
+  const [zoomedPlayer, setZoomedPlayer] = useState<Player | null>(null);
 
   // Calculate target squad quota requirement
   const targetRequired = useMemo(() => {
@@ -210,13 +213,20 @@ export const DraftPoolModal: React.FC<DraftPoolModalProps> = ({
                       <CheckCircle2 className="w-3.5 h-3.5" />
                     </button>
 
-                    {/* Photo / Avatar */}
-                    <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                    {/* Photo / Avatar (Clickable to Zoom) */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setZoomedPlayer(player);
+                      }}
+                      className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center cursor-pointer relative group/zoom hover:ring-2 hover:ring-[#1283E6] transition-all"
+                      title="Click to view large photo"
+                    >
                       {player.photoUrl ? (
                         <img
                           src={player.photoUrl}
                           alt={player.fullName}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform group-hover/zoom:scale-105"
                           referrerPolicy="no-referrer"
                         />
                       ) : (
@@ -224,14 +234,17 @@ export const DraftPoolModal: React.FC<DraftPoolModalProps> = ({
                           {player.jerseyNumber || '00'}
                         </span>
                       )}
+                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center text-white transition-opacity">
+                        <Maximize2 className="w-3 h-3 text-white" />
+                      </div>
                     </div>
 
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-[#061A36] truncate">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-xs text-[#061A36] break-words leading-tight">
                           {player.fullName}
                         </span>
-                        <span className="text-[10px] font-extrabold text-[#1283E6] bg-blue-100/60 px-1.5 py-0.2 rounded">
+                        <span className="text-[10px] font-extrabold text-[#1283E6] bg-blue-100/60 px-1.5 py-0.2 rounded shrink-0">
                           #{player.jerseyNumber}
                         </span>
                       </div>
@@ -288,6 +301,15 @@ export const DraftPoolModal: React.FC<DraftPoolModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* BIG PHOTO ZOOM LIGHTBOX MODAL */}
+      <PhotoZoomModal
+        isOpen={Boolean(zoomedPlayer)}
+        onClose={() => setZoomedPlayer(null)}
+        player={zoomedPlayer}
+        team={teams.find((t) => t.id === zoomedPlayer?.assignedTeamId)}
+        category={categories.find((c) => c.id === zoomedPlayer?.primaryCategoryId)}
+      />
     </div>
   );
 };

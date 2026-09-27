@@ -272,7 +272,7 @@
         },
         "notes": {
           "type": "string",
-          "description": "Player notes or Bangla script details",
+          "description": "Player notes or contact details",
           "maxLength": 512
         },
         "isCaptain": {
