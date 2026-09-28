@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bplBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E2D59"/>
+      <stop offset="50%" stop-color="#061A36"/>
+      <stop offset="100%" stop-color="#020C1C"/>
+    </linearGradient>
+    <linearGradient id="goldRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3BF"/>
+      <stop offset="35%" stop-color="#FFD43B"/>
+      <stop offset="70%" stop-color="#F59F00"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <radialGradient id="ballShine" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FF6B6B"/>
+      <stop offset="45%" stop-color="#E03131"/>
+      <stop offset="90%" stop-color="#880000"/>
+      <stop offset="100%" stop-color="#400000"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Outer Rounded Shield / Circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#bplBg)" stroke="url(#goldRing)" stroke-width="2.5"/>
+  <circle cx="32" cy="32" r="27.5" fill="none" stroke="#FFE066" stroke-width="0.75" stroke-dasharray="2 1.5" opacity="0.7"/>
+
+  <!-- Crossed Cricket Bats -->
+  <path d="M19 16 L45 42 M20 15 L46 41" stroke="#F59F00" stroke-width="3" stroke-linecap="round"/>
+  <path d="M45 16 L19 42 M44 15 L18 41" stroke="#F59F00" stroke-width="3" stroke-linecap="round"/>
+  <path d="M19 16 L45 42" stroke="#78350F" stroke-width="1" stroke-linecap="round"/>
+  <path d="M45 16 L19 42" stroke="#78350F" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- Golden 3-Point Royal Crown on Top -->
+  <path d="M22 22 L26 13 L32 19 L38 13 L42 22 Z" fill="url(#goldRing)" stroke="#78350F" stroke-width="0.8"/>
+  <circle cx="26" cy="12.5" r="1.5" fill="#FFF3BF"/>
+  <circle cx="32" cy="18.5" r="1.7" fill="#FFF3BF"/>
+  <circle cx="38" cy="12.5" r="1.5" fill="#FFF3BF"/>
+
+  <!-- Crimson 3D Cricket Ball Center -->
+  <circle cx="32" cy="32" r="12.5" fill="url(#ballShine)" stroke="#FFE066" stroke-width="1.2"/>
+  <!-- Ball Curved White Seam -->
+  <path d="M24 27 C28 29, 36 35, 40 37" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M23.5 27 C27.5 29, 35.5 35, 39.5 37" stroke="#FFE3E3" stroke-width="0.9" stroke-dasharray="1 1"/>
+
+  <!-- Bold BPL Plaque / Banner at Lower Portion -->
+  <rect x="10" y="42" width="44" height="15" rx="3.5" fill="#041226" stroke="url(#goldRing)" stroke-width="1.5"/>
+  <text x="32" y="53.5" font-family="system-ui, -apple-system, 'Impact', 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">BPL</text>
+
+  <!-- Small Gold Star / Season 2 tag below or dot -->
+  <circle cx="14" cy="49.5" r="1.3" fill="#FFD43B"/>
+  <circle cx="50" cy="49.5" r="1.3" fill="#FFD43B"/>
+</svg>

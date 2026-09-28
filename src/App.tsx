@@ -581,6 +581,24 @@ export default function App() {
     return drafts.find((d) => d.id === activeDraftId) || null;
   }, [drafts, activeDraftId]);
 
+  // Dynamic browser favicon sync with tournament branding
+  useEffect(() => {
+    const currentLogo = activeDraft?.logoUrl;
+    const svgIcon = document.querySelector("link[type='image/svg+xml']") as HTMLLinkElement | null;
+    const defaultPngIcon = document.querySelector("link[sizes='32x32']") as HTMLLinkElement | null;
+    const shortcutIcon = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement | null;
+
+    if (currentLogo && currentLogo.startsWith('data:image/')) {
+      if (svgIcon) svgIcon.href = currentLogo;
+      if (defaultPngIcon) defaultPngIcon.href = currentLogo;
+      if (shortcutIcon) shortcutIcon.href = currentLogo;
+    } else {
+      if (svgIcon) svgIcon.href = '/favicon.svg';
+      if (defaultPngIcon) defaultPngIcon.href = '/favicon-32x32.png';
+      if (shortcutIcon) shortcutIcon.href = '/favicon.ico';
+    }
+  }, [activeDraft?.logoUrl]);
+
   // Visible drafted players and picks reflecting the official completed tournament
   const effectivePlayers = useMemo(() => {
     return players;
