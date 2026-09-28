@@ -23,6 +23,7 @@ import {
 import { Category, Player, Team, AppUser } from '../types';
 import { fileToDataUrl } from '../lib/imageUtils';
 import { PhotoZoomModal } from './PhotoZoomModal';
+import { ImportDefaultTeamsModal } from './ImportDefaultTeamsModal';
 
 interface TeamsViewProps {
   teams: Team[];
@@ -306,6 +307,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
   onDeleteTeam,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -316,7 +318,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
   // Global Franchise Settings State: Default Squad Size & Default Category Quota Limit
   const [defaultSquadSize, setDefaultSquadSize] = useState<number>(() => {
-    return teams.length > 0 && teams[0].maxPlayers ? teams[0].maxPlayers : 11;
+    return teams.length > 0 && teams[0].maxPlayers ? teams[0].maxPlayers : 10;
   });
   const [defaultQuotaLimit, setDefaultQuotaLimit] = useState<number>(1);
   const [isApplyingAll, setIsApplyingAll] = useState(false);
@@ -477,7 +479,16 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            title="Import franchise teams from default BPL registry"
+          >
+            <Shield className="w-3.5 h-3.5 text-amber-300" />
+            <span>Import Teams</span>
+          </button>
+
           <button
             onClick={() => setShowSettingsCard((prev) => !prev)}
             className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
@@ -568,7 +579,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                         : 'bg-white/10 text-slate-300 hover:bg-white/20'
                     }`}
                   >
-                    {size} Players {size === 11 ? '★ (Official BPL)' : ''}
+                    {size} Players {size === 10 ? '★ (Official BPL Season-2)' : ''}
                   </button>
                 ))}
               </div>
@@ -1257,6 +1268,28 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
           (c) => c.id === zoomedPlayer?.primaryCategoryId || c.id === zoomedPlayer?.assignedCategoryId
         )}
       />
+
+      {/* Import Default Teams Modal */}
+      {isImportModalOpen && (
+        <ImportDefaultTeamsModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          activeDraftId={activeDraftId}
+          currentTeams={teams}
+          onImportTeams={async (importedTeams) => {
+            if (onBulkSaveTeams) {
+              await onBulkSaveTeams(importedTeams);
+            } else {
+              for (const t of importedTeams) {
+                await onSaveTeam(t);
+              }
+            }
+            setSuccessToast(`Successfully imported ${importedTeams.length} franchise teams!`);
+            setTimeout(() => setSuccessToast(null), 4000);
+          }}
+          onOpenCreateNew={handleOpenAdd}
+        />
+      )}
     </div>
   );
 };

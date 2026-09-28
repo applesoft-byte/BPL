@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Layers, Plus, Edit2, Trash2, ArrowUp, ArrowDown, Zap, RotateCcw } from 'lucide-react';
 import { Category } from '../types';
+import { ImportDefaultCategoriesModal } from './ImportDefaultCategoriesModal';
 
 interface CategoriesViewProps {
   categories: Category[];
@@ -20,6 +21,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   onResetToDefaults,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isResetting, setIsResetting] = useState(false);
 
@@ -87,7 +89,16 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            title="Import role categories from official registry"
+          >
+            <Layers className="w-3.5 h-3.5 text-yellow-200" />
+            <span>Import Categories</span>
+          </button>
+
           {onResetToDefaults && (
             <button
               disabled={isResetting}
@@ -284,6 +295,26 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Import Default Categories Modal */}
+      {isImportModalOpen && (
+        <ImportDefaultCategoriesModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          activeDraftId={activeDraftId}
+          currentCategories={categories}
+          onImportCategories={async (importedCats) => {
+            if (onBulkSaveCategories) {
+              await onBulkSaveCategories(importedCats);
+            } else {
+              for (const c of importedCats) {
+                await onSaveCategory(c);
+              }
+            }
+          }}
+          onOpenCreateNew={handleOpenAdd}
+        />
       )}
     </div>
   );

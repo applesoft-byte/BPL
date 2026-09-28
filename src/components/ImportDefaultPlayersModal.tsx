@@ -10,6 +10,7 @@ import {
   Square,
   Shield,
   Filter,
+  Plus,
 } from 'lucide-react';
 import { Player, Category } from '../types';
 import { createSampleDraftData } from '../lib/sampleData';
@@ -21,6 +22,7 @@ interface ImportDefaultPlayersModalProps {
   currentPlayers: Player[];
   categories: Category[];
   onImportPlayers: (playersToImport: Player[]) => Promise<void>;
+  onOpenCreateNew?: () => void;
 }
 
 export const ImportDefaultPlayersModal: React.FC<ImportDefaultPlayersModalProps> = ({
@@ -30,6 +32,7 @@ export const ImportDefaultPlayersModal: React.FC<ImportDefaultPlayersModalProps>
   currentPlayers,
   categories,
   onImportPlayers,
+  onOpenCreateNew,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
@@ -226,6 +229,19 @@ export const ImportDefaultPlayersModal: React.FC<ImportDefaultPlayersModalProps>
               >
                 Clear
               </button>
+              {onOpenCreateNew && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenCreateNew();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs whitespace-nowrap cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create New</span>
+                </button>
+              )}
             </div>
           </div>
 

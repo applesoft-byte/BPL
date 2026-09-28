@@ -18,7 +18,7 @@ import { DraftPoolModal } from './components/DraftPoolModal';
 import { AuthModal } from './components/AuthModal';
 import { SuperadminReferenceModal } from './components/SuperadminReferenceModal';
 import { CreateDraftModal } from './components/CreateDraftModal';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import { testFirestoreConnection } from './lib/firebase';
 import { firebaseDb } from './lib/firebaseDb';
 import { AppUser } from './types';
@@ -47,6 +47,11 @@ export default function App() {
   // Mobile + Ref Number Auth & Cloud Sync State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => authService.getCurrentUser());
 
+  // Unique identifier for current active user or guest session
+  const currentUserId = useMemo(() => {
+    return currentUser?.id || currentUser?.mobile || currentUser?.email || 'guest';
+  }, [currentUser]);
+
   // Determine if active user is Superadmin (Arif Iquebal)
   // ONLY Superadmin changes can sync to Firebase Cloud to update the whole website!
   const isSuperadmin = useMemo(() => {
@@ -57,6 +62,48 @@ export default function App() {
       authService.isSuperadmin(currentUser.email || '')
     );
   }, [currentUser]);
+
+  // Filter drafts so personal drafts are ONLY visible to their respective owner!
+  // Official drafts are always visible to everyone.
+  const filterDraftsForUser = useCallback(
+    (draftList: Draft[]) => {
+      return draftList.filter((d) => {
+        // Official tournament draft is ALWAYS visible to every user and guest
+        if (isOfficialDraft(d.id) || d.isOfficial) return true;
+
+        // If a registered user is logged in:
+        if (currentUser) {
+          if (d.ownerId) {
+            return (
+              d.ownerId === currentUser.id ||
+              (currentUser.mobile && d.ownerId === currentUser.mobile) ||
+              (currentUser.email && d.ownerId.toLowerCase() === currentUser.email.toLowerCase())
+            );
+          }
+          // Legacy unassigned drafts only visible to superadmin
+          return isSuperadmin;
+        }
+
+        // If guest user:
+        // Guest only sees official drafts and drafts created in this session as guest
+        return d.ownerId === 'guest';
+      });
+    },
+    [currentUser, isSuperadmin]
+  );
+
+  // App-level Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast((prev) => (prev?.message === message ? null : prev));
+    }, 4500);
+  }, []);
+
+  // Delete Draft Confirmation Modal State
+  const [draftToDelete, setDraftToDelete] = useState<Draft | null>(null);
+  const [isDeletingDraft, setIsDeletingDraft] = useState<boolean>(false);
 
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
   const [isSyncingToCloud, setIsSyncingToCloud] = useState<boolean>(false);
@@ -168,14 +215,28 @@ export default function App() {
     });
   };
 
+  // Helper to check if a roster has corrupted player assignments (>10 players in any team)
+  const isRosterCorrupted = useCallback((playerList: Player[]) => {
+    if (!playerList || playerList.length === 0) return false;
+    const counts: Record<string, number> = {};
+    for (const p of playerList) {
+      if (p.assignedTeamId) {
+        counts[p.assignedTeamId] = (counts[p.assignedTeamId] || 0) + 1;
+        if (counts[p.assignedTeamId] > 10) return true;
+      }
+    }
+    return false;
+  }, []);
+
   // 1. Initial Load from IndexedDB (Instant Cache-First ~10ms) & Background Cloud Sync
   const loadDatabase = useCallback(async () => {
     try {
       setIsLoading(true);
-      const officialSeedKey = 'bpl_seeded_v8_season2_final_roster_60';
+      const officialRosterKey = 'bpl_seeded_v10_season2_roster_10_players_fixed';
 
       // --- PHASE 1: INSTANT LOCAL LOAD (IndexedDB ~5-15ms) ---
-      const allDrafts = await db.getAllDrafts();
+      const rawLocalDrafts = await db.getAllDrafts();
+      const allDrafts = filterDraftsForUser(rawLocalDrafts);
 
       if (allDrafts.length > 0) {
         setDrafts(allDrafts);
@@ -186,12 +247,39 @@ export default function App() {
           allDrafts[0];
         setActiveDraftId(selected.id);
 
-        const [dbPlayers, dbTeams, dbCats, dbPicks] = await Promise.all([
+        let [dbPlayers, dbTeams, dbCats, dbPicks] = await Promise.all([
           db.getPlayers(selected.id),
           db.getTeams(selected.id),
           db.getCategories(selected.id),
           db.getPicks(selected.id),
         ]);
+
+        // Auto-fix if official tournament has corrupted rosters (>10 players in a team) or needs v10 roster update
+        if (isOfficialDraft(selected.id) && (isRosterCorrupted(dbPlayers) || localStorage.getItem(officialRosterKey) !== 'true')) {
+          const sample = createSampleDraftData();
+          const fixedPlayers = sample.players.map((p) => ({ ...p, draftId: selected.id }));
+          const fixedPicks = sample.picks.map((pk) => ({ ...pk, draftId: selected.id }));
+          const fixedTeams = sample.teams.map((t) => ({ ...t, draftId: selected.id }));
+          const fixedCats = sample.categories.map((c) => ({ ...c, draftId: selected.id }));
+
+          await Promise.all([
+            db.bulkSavePlayers(fixedPlayers),
+            db.bulkSavePicks(fixedPicks),
+            db.bulkSaveTeams(fixedTeams),
+            db.bulkSaveCategories(fixedCats),
+            db.saveDraft({ ...sample.draft, id: selected.id }),
+          ]);
+          localStorage.setItem(officialRosterKey, 'true');
+
+          dbPlayers = fixedPlayers;
+          dbTeams = fixedTeams;
+          dbCats = fixedCats;
+          dbPicks = fixedPicks;
+
+          // Repair cloud Firestore as well
+          firebaseDb.savePlayers(fixedPlayers, 'superadmin-arif').catch(() => {});
+          Promise.all(fixedPicks.map((pk) => firebaseDb.savePick(pk, 'superadmin-arif'))).catch(() => {});
+        }
 
         setPlayers(dbPlayers);
         setTeams(dbTeams);
@@ -208,7 +296,7 @@ export default function App() {
           db.bulkSavePlayers(sample.players),
           db.bulkSavePicks(sample.picks),
         ]);
-        localStorage.setItem(officialSeedKey, 'true');
+        localStorage.setItem(officialRosterKey, 'true');
 
         setDrafts([sample.draft]);
         setActiveDraftId(sample.draft.id);
@@ -233,7 +321,7 @@ export default function App() {
       // --- PHASE 2: NON-BLOCKING ASYNC CLOUD REVALIDATION ---
       setTimeout(async () => {
         try {
-          const cloudDrafts = await firebaseDb.getAllDrafts();
+          const cloudDrafts = await firebaseDb.getAllDrafts(currentUserId);
           if (cloudDrafts && cloudDrafts.length > 0) {
             const selectedCloudDraft =
               cloudDrafts.find((d) => isOfficialDraft(d.id)) || cloudDrafts[0];
@@ -244,7 +332,23 @@ export default function App() {
               firebaseDb.getPicks(selectedCloudDraft.id),
             ]);
 
-            if (cPlayers && cPlayers.length >= 20) {
+            const cloudCorrupted = isOfficialDraft(selectedCloudDraft.id) && isRosterCorrupted(cPlayers || []);
+            if (cloudCorrupted) {
+              console.warn('Cloud draft has unbalanced roster (>10 players per team). Auto-repairing Firestore...');
+              const sample = createSampleDraftData();
+              const fixedPlayers = sample.players.map((p) => ({ ...p, draftId: selectedCloudDraft.id }));
+              const fixedPicks = sample.picks.map((pk) => ({ ...pk, draftId: selectedCloudDraft.id }));
+              const fixedTeams = sample.teams.map((t) => ({ ...t, draftId: selectedCloudDraft.id }));
+              const fixedCats = sample.categories.map((c) => ({ ...c, draftId: selectedCloudDraft.id }));
+
+              Promise.all([
+                firebaseDb.saveDraft({ ...sample.draft, id: selectedCloudDraft.id }, 'superadmin-arif'),
+                firebaseDb.saveCategories(fixedCats, 'superadmin-arif'),
+                firebaseDb.saveTeams(fixedTeams, 'superadmin-arif'),
+                firebaseDb.savePlayers(fixedPlayers, 'superadmin-arif'),
+                ...fixedPicks.map((pk) => firebaseDb.savePick(pk, 'superadmin-arif')),
+              ]).catch(() => {});
+            } else if (cPlayers && cPlayers.length >= 20) {
               const localDrafts = await db.getAllDrafts();
               const merged = [...cloudDrafts];
               for (const ld of localDrafts) {
@@ -252,7 +356,8 @@ export default function App() {
                   merged.push(ld);
                 }
               }
-              setDrafts(merged);
+              const userFilteredDrafts = filterDraftsForUser(merged);
+              setDrafts(userFilteredDrafts);
 
               // Persist official cloud tournament locally in background
               Promise.all([
@@ -283,7 +388,7 @@ export default function App() {
       console.error('Failed to initialize database:', err);
       setIsLoading(false);
     }
-  }, [isSuperadmin]);
+  }, [isSuperadmin, filterDraftsForUser, currentUserId, isRosterCorrupted]);
 
   useEffect(() => {
     loadDatabase();
@@ -350,6 +455,10 @@ export default function App() {
 
       unsubPlayers = firebaseDb.subscribePlayers(activeDraftId, (cloudPlayers) => {
         if (!cloudPlayers || cloudPlayers.length === 0) return;
+        if (isOfficialDraft(activeDraftId) && isRosterCorrupted(cloudPlayers)) {
+          console.warn('Real-time subscription: Ignored corrupted cloud players snapshot (>10 players assigned to a team)');
+          return;
+        }
         setPlayers((prev) => {
           if (prev.length === cloudPlayers.length) {
             let isIdentical = true;
@@ -528,6 +637,9 @@ export default function App() {
     importPlayers: boolean;
     importTeams: boolean;
     importCategories: boolean;
+    selectedPlayerIds?: string[];
+    selectedTeamIds?: string[];
+    selectedCategoryIds?: string[];
   }) => {
     const now = Date.now();
     const newDraftId = `draft-${now}`;
@@ -536,10 +648,16 @@ export default function App() {
     // 1. Categories
     let newCategories: Category[] = [];
     if (params.importCategories) {
-      newCategories = sample.categories.map((c) => ({
+      const catsToImport =
+        params.selectedCategoryIds && params.selectedCategoryIds.length > 0
+          ? sample.categories.filter((c) => params.selectedCategoryIds!.includes(c.id))
+          : sample.categories;
+
+      newCategories = catsToImport.map((c, idx) => ({
         ...c,
-        id: `cat-${now}-${c.order}`,
+        id: `cat-${now}-${idx + 1}`,
         draftId: newDraftId,
+        order: idx + 1,
         createdAt: now,
         updatedAt: now,
       }));
@@ -548,7 +666,12 @@ export default function App() {
     // 2. Teams
     let newTeams: Team[] = [];
     if (params.importTeams) {
-      newTeams = sample.teams.map((t) => ({
+      const teamsToImport =
+        params.selectedTeamIds && params.selectedTeamIds.length > 0
+          ? sample.teams.filter((t) => params.selectedTeamIds!.includes(t.id))
+          : sample.teams;
+
+      newTeams = teamsToImport.map((t) => ({
         ...t,
         id: `team-${now}-${t.id}`,
         draftId: newDraftId,
@@ -560,7 +683,12 @@ export default function App() {
     // 3. Players
     let newPlayers: Player[] = [];
     if (params.importPlayers) {
-      newPlayers = sample.players.map((p, idx) => {
+      const playersToImport =
+        params.selectedPlayerIds && params.selectedPlayerIds.length > 0
+          ? sample.players.filter((p) => params.selectedPlayerIds!.includes(p.id))
+          : sample.players;
+
+      newPlayers = playersToImport.map((p, idx) => {
         const origCat = sample.categories.find((c) => c.id === p.primaryCategoryId);
         const matchedTargetCat = newCategories.find(
           (c) => origCat && c.name.toLowerCase().trim() === origCat.name.toLowerCase().trim()
@@ -593,6 +721,9 @@ export default function App() {
       tagline: 'Play Together Win Together',
       status: 'setup',
       defaultPlayerQuota: 11,
+      ownerId: currentUserId,
+      isOfficial: false,
+      isPersonal: true,
       settings: {
         animationSpeed: 'normal',
         soundEnabled: true,
@@ -741,26 +872,52 @@ export default function App() {
     await switchDraft(newDraftId);
   };
 
-  // Delete Draft
-  const handleDeleteDraft = async (draftId: string) => {
+  // Delete Draft (Opens confirmation modal)
+  const handleDeleteDraft = (draftId: string) => {
+    const target = drafts.find((d) => d.id === draftId);
+    if (!target) return;
+
     if (isOfficialDraft(draftId) && !isSuperadmin) {
-      alert('The official BPL Season-2 tournament cannot be deleted by guest users.');
+      showToast('The official BPL Season-2 tournament cannot be deleted by guest users.', 'error');
       return;
     }
-    if (confirm('Are you sure you want to permanently delete this tournament draft?')) {
+
+    setDraftToDelete(target);
+  };
+
+  // Confirm and Execute Draft Deletion
+  const handleConfirmDeleteDraft = async () => {
+    if (!draftToDelete) return;
+    const draftId = draftToDelete.id;
+    try {
+      setIsDeletingDraft(true);
+
+      // 1. Delete from local IndexedDB
       await db.deleteDraft(draftId);
-      if (isSuperadmin) {
-        firebaseDb.deleteDraft(draftId).catch(() => {});
-      }
+
+      // 2. Delete from Firestore if exists
+      await firebaseDb.deleteDraft(draftId).catch(() => {});
+
+      // 3. Immediately update drafts list in React state
+      setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+
+      // 4. If deleting active draft, switch to official tournament
       if (activeDraftId === draftId) {
         localStorage.removeItem('bpl_last_draft_id');
         localStorage.removeItem('bpl_active_tournament_logo');
         localStorage.removeItem('bpl_active_tournament_name');
         localStorage.removeItem('bpl_active_tournament_season');
-        await switchDraft('bpl-season-2-official');
-      } else {
-        await loadDatabase();
+        const fallbackOfficialId = drafts.find((d) => isOfficialDraft(d.id) && d.id !== draftId)?.id || 'bpl-s2-main';
+        await switchDraft(fallbackOfficialId);
       }
+
+      showToast(`Tournament draft "${draftToDelete.name}" deleted successfully.`, 'success');
+      setDraftToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete draft:', err);
+      showToast('Failed to delete draft. Please try again.', 'error');
+    } finally {
+      setIsDeletingDraft(false);
     }
   };
 
@@ -1417,8 +1574,84 @@ export default function App() {
       <CreateDraftModal
         isOpen={isCreateDraftModalOpen}
         onClose={() => setIsCreateDraftModalOpen(false)}
+        isSuperadmin={isSuperadmin}
         onCreateDraft={handleCreateDraftConfirmed}
       />
+
+      {/* Delete Draft Confirmation Modal */}
+      {draftToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Delete Tournament Draft</h3>
+                <p className="text-xs text-slate-500">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2">
+              <p>
+                Are you sure you want to permanently delete{' '}
+                <strong className="text-slate-900 font-bold">{draftToDelete.name}</strong> ({draftToDelete.season})?
+              </p>
+              <p className="text-[11px] text-slate-500">
+                All players, franchise teams, role categories, and lottery picks in this draft will be removed from your workspace.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDraftToDelete(null)}
+                disabled={isDeletingDraft}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteDraft}
+                disabled={isDeletingDraft}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingDraft ? 'Deleting...' : 'Yes, Delete Draft'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* App Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-200 ${
+            toast.type === 'error'
+              ? 'bg-red-950 text-white border-red-500/50'
+              : 'bg-[#061A36] text-white border-emerald-500/50'
+          }`}
+        >
+          <div
+            className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+              toast.type === 'error'
+                ? 'bg-red-500/20 text-red-400'
+                : 'bg-emerald-500/20 text-emerald-400'
+            }`}
+          >
+            {toast.type === 'error' ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+          </div>
+          <p className="text-xs font-bold text-white pr-2">{toast.message}</p>
+          <button
+            onClick={() => setToast(null)}
+            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 text-xs ml-auto"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -107,6 +107,9 @@ export interface Draft {
   defaultPlayerQuota?: number;
   currentCategoryId?: string;
   settings: DraftSettings;
+  ownerId?: string;
+  isOfficial?: boolean;
+  isPersonal?: boolean;
   createdAt: number;
   updatedAt: number;
   startedAt?: number;

@@ -882,6 +882,7 @@ export const PlayersView: React.FC<PlayersViewProps> = ({
             showToast(`Successfully imported ${importedPlayers.length} players from official registry!`);
             setIsDefaultPlayersModalOpen(false);
           }}
+          onOpenCreateNew={handleOpenAdd}
         />
       )}
 

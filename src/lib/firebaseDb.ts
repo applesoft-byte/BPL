@@ -97,34 +97,26 @@ export const firebaseDb = {
     }
   },
 
-  async getAllDrafts(): Promise<Draft[]> {
+  async getAllDrafts(userId?: string): Promise<Draft[]> {
     const path = 'drafts';
     try {
       const snap = await getDocs(collection(db, 'drafts'));
       const list: Draft[] = [];
+
       snap.forEach((d) => {
         const data = d.data() as Draft;
-        const isOfficial = data.id === 'bpl-season-2-official' || data.id === 'bpl-s2-main';
-        const isSuperadminOwner =
-          data.ownerId === 'superadmin' ||
-          data.ownerId === 'superadmin-arif' ||
-          data.ownerId?.startsWith('usr-superadmin');
-        if (isOfficial || isSuperadminOwner) {
+        const isOfficial = data.id === 'bpl-season-2-official' || data.id === 'bpl-s2-main' || data.isOfficial;
+        if (isOfficial) {
+          list.push(data);
+        } else if (userId && (data.ownerId === userId || data.ownerId?.toLowerCase() === userId.toLowerCase())) {
           list.push(data);
         }
       });
-      // Fallback if list is empty but snap had documents
-      if (list.length === 0 && !snap.empty) {
-        snap.forEach((d) => {
-          const data = d.data() as Draft;
-          if (data.id === 'bpl-season-2-official' || data.id === 'bpl-s2-main') {
-            list.push(data);
-          }
-        });
-      }
+
       return list;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, path);
+      return [];
     }
   },
 
@@ -132,8 +124,23 @@ export const firebaseDb = {
     const path = `drafts/${draftId}`;
     try {
       await deleteDoc(doc(db, 'drafts', draftId));
+      // Also delete any child documents in Firestore for this draftId
+      const deleteCollectionForDraft = async (colName: string) => {
+        try {
+          const q = query(collection(db, colName), where('draftId', '==', draftId));
+          const snap = await getDocs(q);
+          const deletes = snap.docs.map((docSnap) => deleteDoc(doc(db, colName, docSnap.id)).catch(() => {}));
+          await Promise.all(deletes);
+        } catch {}
+      };
+      Promise.all([
+        deleteCollectionForDraft('teams'),
+        deleteCollectionForDraft('players'),
+        deleteCollectionForDraft('categories'),
+        deleteCollectionForDraft('picks'),
+      ]).catch(() => {});
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, path);
+      console.warn('Firestore deleteDraft note:', error);
     }
   },
 

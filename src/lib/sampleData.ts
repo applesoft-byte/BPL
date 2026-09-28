@@ -953,7 +953,7 @@ export function createSampleDraftData(): {
 
     // --- Round 8: Batting All-Rounder Level-2 ---
     { seq: 43, fullName: 'Tusher Hossain', teamId: 'team-abd-sports', catId: 'cat-bat-all-lvl-2' },
-    { seq: 44, fullName: 'Rony Khan', teamId: 'team-warriors', catId: 'cat-bat-all-lvl-2' },
+    { seq: 44, fullName: 'Roni Khan', teamId: 'team-warriors', catId: 'cat-bat-all-lvl-2' },
     { seq: 45, fullName: 'Jahangir (2)', teamId: 'team-prime', catId: 'cat-bat-all-lvl-2' },
     { seq: 46, fullName: 'HK RONY', teamId: 'team-fearless', catId: 'cat-bat-all-lvl-2' },
     { seq: 47, fullName: 'LKD Sadek', teamId: 'team-mighty', catId: 'cat-bat-all-lvl-2' },
@@ -983,7 +983,7 @@ export function createSampleDraftData(): {
 
     // Match in official Season-2 roster/picks
     const pickAssignment = season2PicksOrder.find(
-      (item) => item.fullName.toLowerCase === raw.fullName.toLowerCase
+      (item) => item.fullName.toLowerCase().trim() === raw.fullName.toLowerCase().trim()
     );
 
     const isCaptain = !!pickAssignment?.isCaptain || teams.some((t) => t.captainPlayerId === playerId);

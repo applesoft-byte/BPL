@@ -19,6 +19,7 @@ import {
   LogIn,
   RefreshCw,
   Crown,
+  Lock,
 } from 'lucide-react';
 import { Draft, DraftStats, Player, Team, AppUser } from '../types';
 import { authService } from '../lib/authService';
@@ -473,13 +474,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <Copy className="w-4 h-4" />
                       </button>
 
-                      <button
-                        onClick={() => onDeleteDraft(d.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                        title="Delete draft"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {(!isOfficialDraft(d.id) || isSuperadmin) ? (
+                        <button
+                          onClick={() => onDeleteDraft(d.id)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Delete draft"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <span
+                          className="p-1.5 text-slate-300 cursor-not-allowed"
+                          title="Official tournament is protected from deletion"
+                        >
+                          <Lock className="w-4 h-4" />
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
